@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="dlmGtmOyuMgrList">
+	<select id="list" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM (  
+						  SELECT   DECODE(ICBSI.BATCH_SCHEDULE_TYPE,'A','주간실적 SMS 통지','B','근무년수 1년 미만자 휴가관리') AS BATCH_SCHEDULE_TYPE  
+                                  ,ICBSI.BATCH_SCHEDULE_START_DATE
+                                  ,ICBSI.BATCH_SCHEDULE_END_DATE
+                            FROM ITSM_COM_BATCH_SCHEDULE_INFO ICBSI
+                           WHERE 1=1      
+							 <if test='p_batch_schedule_type != null and !p_batch_schedule_type.equalsIgnoreCase("")'>
+							 	AND ICBSI.BATCH_SCHEDULE_TYPE = #{p_batch_schedule_type}
+							 </if>
+							 
+						     ORDER BY ICBSI.BATCH_SCHEDULE_TYPE, ICBSI.CREATE_DATE DESC	          
+		) T1 ) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<select id="selectTotalRecord" parameterType="java.util.Map" resultType="String">
+	  SELECT   COUNT(*) AS CNT
+        FROM ITSM_COM_BATCH_SCHEDULE_INFO ICBSI
+       WHERE 1=1 
+                      
+	 <if test='p_batch_schedule_type != null and !p_batch_schedule_type.equalsIgnoreCase("")'>
+	 	AND ICBSI.BATCH_SCHEDULE_TYPE = #{p_batch_schedule_type}
+	 </if>
+  	</select>
+  	
+</mapper>

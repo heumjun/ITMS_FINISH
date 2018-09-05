@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="GeunTaeMgr">
+
+	<select id="gtmLessOneYearInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+			  FROM (SELECT T1.*
+			             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+			          FROM 
+			          (  	
+						SELECT COUNT(*) OVER() AS CNT
+								   , IDGOBI.SEQ_ID
+							       , IDGOBI.ICUI_SEQ_ID
+							       , ICUI.NAME
+							       , IDGOBI.APPLY_YMD
+							       , IDGOBI.APPLY_FLAG
+							FROM ITSM_DLM_GTM_OYU_BASE_INFO IDGOBI, ITSM_COM_USER_INFO ICUI
+							WHERE 1=1
+							AND ICUI.SEQ_ID = IDGOBI.ICUI_SEQ_ID
+							<if test='p_name != null and !p_name.equalsIgnoreCase("")'> 
+			                	AND ICUI.NAME LIKE '%' || #{p_name} || '%'
+							</if> 
+							ORDER BY TO_NUMBER(ICUI.ORDER_NUM), APPLY_YMD	
+						) T1 
+					) T2
+			 WHERE PAGE = #{curPageNo}		    
+	</select>
+	
+	<select id="gtmLessOneYearUserList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+			SELECT IDGBI.WORK_START_DATE
+						, IDGBI.WORK_END_DATE
+						, ICUI.SEQ_ID AS SB_VALUE
+						, ICUI.NAME  AS SB_NAME
+						, CASE WHEN ICUI.SEQ_ID = #{p_icui_seq_id} THEN 'selected=\"selected\"' 
+				           ELSE '' 
+				           END AS SB_SELECTED
+			FROM ITSM_COM_USER_INFO ICUI, ITSM_DLM_GTM_BASE_INFO IDGBI
+				WHERE ICUI.SEQ_ID = IDGBI.ICUI_SEQ_ID
+				AND IDGBI.GUBUN = 'N'
+				AND TO_CHAR(IDGBI.WORK_END_DATE,'YYYYMMDD') > TO_CHAR(SYSDATE,'YYYYMMDD')
+			ORDER BY TO_NUMBER(ICUI.ORDER_NUM)
+	</select>
+	
+	<select id="dataDuplicationCnt" parameterType="java.util.Map" resultType="int" >
+		SELECT count(*) as cnt
+		  FROM ITSM_DLM_GTM_OYU_BASE_INFO
+		 WHERE SEQ_ID = #{seqId}
+	</select>
+	
+	<insert id="lessOneYearInfoInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_DLM_GTM_OYU_BASE_INFO(
+		  	   SEQ_ID
+	  		 , ICUI_SEQ_ID 
+		     , APPLY_YMD
+		     , APPLY_FLAG
+		     , CREATE_DATE 
+		     , CREATED_BY 
+		     , LAST_UPDATE_DATE 
+		     , LAST_UPDATE_BY 
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{icui_seq_id}
+		     , #{apply_ymd}
+		     , 'N'
+		     , TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		     , #{loginId}
+		     , TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="lessOneYearInfoUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_DLM_GTM_OYU_BASE_INFO
+		   SET ICUI_SEQ_ID 			  = #{icui_seq_id} 
+		   	  ,APPLY_YMD		  = #{apply_ymd}
+		   	  ,LAST_UPDATE_DATE	  = SYSDATE
+		      ,LAST_UPDATE_BY     = #{loginId}
+		 WHERE SEQ_ID = #{seq_id}
+	</update>
+	
+	<delete id="lessOneYearInfoDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_DLM_GTM_OYU_BASE_INFO
+		 WHERE SEQ_ID = #{seq_id}
+  	</delete>
+	
+	<select id="monthViewList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		 <![CDATA[
+			SELECT ICUI.NAME || ' (' ||
+			       (SELECT MEDIUM_CODE_KOR_NAME
+			          FROM ITSM_COM_CODE_INFO_DETAIL
+			         WHERE MEDIUM_TYPE = IDGRI.VAC_TYPE) || ')' AS TITLE
+			      ,TO_CHAR(IDGRI.VAC_START_DATE, 'YYYYMMDD') AS VAC_START_DATE
+	          	  ,TO_DATE(TO_CHAR(IDGRI.VAC_END_DATE, 'YYYYMMDD') || '235959', 'YYYYMMDDHH24MISS') AS VAC_END_DATE
+			      ,IDGRI.VAC_REQ_REASON
+			      ,'' AS CLASS_NAME
+			      , ROWNUM + #{idx} AS EVENT_NUMBER
+              FROM ITSM_DLM_GTM_REQ_INFO IDGRI 
+                  ,ITSM_COM_USER_INFO    ICUI
+              WHERE 1=1
+                AND ICUI.SEQ_ID = IDGRI.ICUI_SEQ_ID
+                AND IDGRI.STATUS IN ('S', 'C')
+                ORDER BY TO_NUMBER(ICUI.ORDER_NUM)			    
+		]]>	    
+	</select>
+	
+	<select id="getHoliday" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT TITLE as TITLE
+			 , TO_CHAR(HOLIDAY, 'YYYYMMDD') as VAC_START_DATE
+			 , TO_DATE(TO_CHAR(HOLIDAY, 'YYYYMMDD') || '235959', 'YYYYMMDDHH24MISS') as VAC_END_DATE
+			 , COMMENTS as VAC_REQ_REASON
+			 , 'holiday' AS CLASS_NAME
+			 , ROWNUM AS EVENT_NUMBER
+  		  FROM ITSM_HOLIDAY_INFO
+	</select>
+	
+	<select id="getDatePickerHoliday" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT TO_CHAR(HOLIDAY, 'YYYY-fmMM-DD') AS HOLIDAY
+			  ,TO_CHAR(HOLIDAY, 'YYYY-MM-DD') AS HOLIDAYSTR
+  		  FROM ITSM_HOLIDAY_INFO
+	</select>
+
+	<select id="gtmBaseInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT
+	          ,SEQ_ID
+	          ,ICUI_SEQ_ID
+	          ,USER_NAME
+	          ,YEAR
+	          ,TO_CHAR(WORK_START_DATE, 'YYYY-MM-DD') AS WORK_START_DATE
+	          ,TO_CHAR(WORK_END_DATE, 'YYYY-MM-DD') AS WORK_END_DATE
+	          ,GUBUN
+	          ,GEN_USING_POSS_DAY
+	          ,SPE_USING_POSS_DAY
+	          ,BONUS_DAY
+	          ,TOTAL_VACATION
+	          ,USING_GENERALIZED_VACATION
+	          ,USING_SPECIAL_VACATION
+	          ,USING_REPLACE_VACATION
+	          ,PRE_YEAR_USING_DAY
+	          ,USING_TOTAL_VACATION
+	          ,TOTAL_VACATION - USING_TOTAL_VACATION AS BALANCE
+	          ,ETC
+	      FROM (SELECT T.SEQ_ID
+	                  ,T.ICUI_SEQ_ID
+	                  ,T.USER_NAME
+	                  ,T.YEAR
+	                  ,T.WORK_START_DATE
+	                  ,T.WORK_END_DATE
+	                  ,T.GUBUN
+	                  ,T.GEN_USING_POSS_DAY
+	                  ,T.SPE_USING_POSS_DAY
+	                  ,T.BONUS_DAY
+	                  ,T.GEN_USING_POSS_DAY + T.SPE_USING_POSS_DAY + T.BONUS_DAY AS TOTAL_VACATION
+	                  ,T.USING_GENERALIZED_VACATION
+	                  ,T.USING_SPECIAL_VACATION
+	                  ,T.USING_REPLACE_VACATION
+	                  ,T.PRE_YEAR_USING_DAY
+	                  ,T.USING_GENERALIZED_VACATION + T.USING_SPECIAL_VACATION +
+	                   T.USING_REPLACE_VACATION + T.PRE_YEAR_USING_DAY AS USING_TOTAL_VACATION
+	                  ,T.ETC
+	              FROM (SELECT IDGBI.SEQ_ID
+	                          ,IDGBI.ICUI_SEQ_ID
+	                          ,ICUI.LOGIN_ID  AS LOGIN_ID
+	                          ,ICUI.NAME      AS USER_NAME
+	                          ,IDGBI.YEAR
+	                          ,IDGBI.WORK_START_DATE
+	                          ,IDGBI.WORK_END_DATE
+	                          ,IDGBI.GUBUN
+	                          ,IDGBI.GEN_USING_POSS_DAY
+	                          ,IDGBI.SPE_USING_POSS_DAY
+	                          ,(SELECT NVL(SUM(BONUS_DAY), 0)
+	                              FROM ITSM_DLM_GTM_BONUS_INFO
+	                             WHERE ICUI_SEQ_ID = IDGBI.ICUI_SEQ_ID
+	                               AND BONUS_APPLY_YEAR = #{p_sel_year}) AS BONUS_DAY
+	                          ,(SELECT NVL(SUM(VAC_REQ_DAY), 0)
+	                              FROM ITSM_DLM_GTM_REQ_INFO
+	                             WHERE ICUI_SEQ_ID = IDGBI.ICUI_SEQ_ID
+	                               AND VAC_TYPE IN ('VAC_BAN', 'VAC_YEAR')
+	                               AND STATUS IN ('S', 'C')
+	                               AND TO_CHAR(VAC_END_DATE, 'YYYY') = #{p_sel_year}) AS USING_GENERALIZED_VACATION
+	                          ,(SELECT NVL(SUM(VAC_REQ_DAY), 0)
+	                              FROM ITSM_DLM_GTM_REQ_INFO
+	                             WHERE ICUI_SEQ_ID = IDGBI.ICUI_SEQ_ID
+	                               AND VAC_TYPE = 'VAC_SPE'
+	                               AND STATUS IN ('S', 'C')
+	                               AND TO_CHAR(VAC_END_DATE, 'YYYY') = #{p_sel_year}) AS USING_SPECIAL_VACATION
+	                          ,(SELECT NVL(SUM(VAC_REQ_DAY), 0)
+	                              FROM ITSM_DLM_GTM_REQ_INFO
+	                             WHERE ICUI_SEQ_ID = IDGBI.ICUI_SEQ_ID
+	                               AND VAC_TYPE = 'VAC_BON'
+	                               AND STATUS IN ('S', 'C')
+	                               AND TO_CHAR(VAC_END_DATE, 'YYYY') = #{p_sel_year}) AS USING_REPLACE_VACATION
+	                          ,IDGBI.PRE_YEAR_USING_DAY
+	                          ,(SELECT NVL(SUM(VAC_REQ_DAY), 0)
+	                              FROM ITSM_DLM_GTM_REQ_INFO
+	                             WHERE ICUI_SEQ_ID = IDGBI.ICUI_SEQ_ID
+	                               AND VAC_TYPE IN ('VAC_ENT', 'VAC_EDU', 'VAC_ETC')
+	                               AND STATUS IN ('S', 'C')
+	                               AND TO_CHAR(VAC_END_DATE, 'YYYY') = #{p_sel_year}) AS ETC
+	                          ,IDGBI.CREATE_DATE
+	                          ,IDGBI.CREATED_BY
+	                          ,IDGBI.LAST_UPDATE_DATE
+	                          ,IDGBI.LAST_UPDATE_BY
+	                      FROM ITSM_DLM_GTM_BASE_INFO IDGBI
+	                          ,ITSM_COM_USER_INFO ICUI
+	                     WHERE 1=1
+	                       AND IDGBI.ICUI_SEQ_ID = ICUI.SEQ_ID 	
+	                       AND IDGBI.YEAR = #{p_sel_year}
+	                       ORDER BY TO_NUMBER(ICUI.ORDER_NUM)
+	              ) T
+	              WHERE 1=1
+					<if test='p_login_id != null and !p_login_id.equalsIgnoreCase("")'>
+						AND T.LOGIN_ID LIKE '%' || #{p_login_id} || '%'
+					</if>
+					<if test='p_name != null and !p_name.equalsIgnoreCase("")'> 
+	                	AND T.USER_NAME LIKE '%' || #{p_name} || '%'
+					</if> 
+	    ) TT
+	</select>
+	
+	<select id="popUpGtmReqInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT
+		      ,IDGRI.SEQ_ID
+		      ,IDGRI.ICUI_SEQ_ID
+		      ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE SEQ_ID = IDGRI.ICUI_SEQ_ID) AS USER_NAME
+		      ,TO_CHAR(IDGRI.REQ_DATE, 'YYYY-MM-DD') AS REQ_DATE
+		      ,IDGRI.VAC_TYPE
+			  ,(SELECT MEDIUM_CODE_KOR_NAME
+				  FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+				 WHERE ICCID.MEDIUM_TYPE = IDGRI.VAC_TYPE) AS VAC_TYPE_NAME
+		      ,TO_CHAR(IDGRI.VAC_START_DATE, 'YYYY-MM-DD') VAC_START_DATE
+		      ,TO_CHAR(IDGRI.VAC_END_DATE, 'YYYY-MM-DD') VAC_END_DATE
+		      ,IDGRI.VAC_REQ_DAY
+		      ,IDGRI.VAC_REQ_REASON
+		      ,IDGRI.STATUS AS STATUS_CODE
+      		  ,(SELECT ICCID.MEDIUM_CODE_KOR_NAME FROM ITSM_COM_CODE_INFO_DETAIL ICCID WHERE ICCID.MEDIUM_TYPE = IDGRI.STATUS) AS STATUS
+		  FROM ITSM_DLM_GTM_REQ_INFO IDGRI
+		 WHERE IDGRI.ICUI_SEQ_ID = #{p_icui_seq_id}
+		   AND IDGRI.VAC_TYPE IN (
+							   	<foreach collection="typeList" item="item" separator=",">
+									#{item}
+								</foreach>
+							   )
+           AND IDGRI.STATUS IN ('S', 'C')	
+           AND TO_CHAR(VAC_END_DATE, 'YYYY') = #{p_sel_year}					   
+		 ORDER BY IDGRI.VAC_START_DATE
+	</select>
+	
+	<select id="popUpGtmBonusInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT
+		      ,IDGBI.SEQ_ID
+		      ,IDGBI.ICUI_SEQ_ID
+		      ,(SELECT NAME
+		          FROM ITSM_COM_USER_INFO
+		         WHERE SEQ_ID = IDGBI.ICUI_SEQ_ID) AS USER_NAME
+		      ,IDGBI.BONUS_APPLY_YEAR
+		      ,IDGBI.BONUS_APPLY_YEAR AS YEAR
+		      ,TO_CHAR(IDGBI.BONUS_OCCUR_START_DATE, 'YYYY-MM-DD') AS BONUS_OCCUR_START_DATE
+		      ,TO_CHAR(IDGBI.BONUS_OCCUR_END_DATE, 'YYYY-MM-DD') AS BONUS_OCCUR_END_DATE
+		      ,IDGBI.BONUS_DAY
+		      ,IDGBI.BONUS_OCCUR_REASON
+		      ,TO_CHAR(IDGBI.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE
+		  FROM ITSM_DLM_GTM_BONUS_INFO IDGBI
+		 WHERE IDGBI.ICUI_SEQ_ID = #{p_icui_seq_id}
+		 AND IDGBI.BONUS_APPLY_YEAR = #{p_sel_year}
+		 ORDER BY IDGBI.CREATE_DATE DESC
+	</select>
+	
+	<select id="gtmBonusInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		          FROM (SELECT COUNT(*) OVER() AS CNT
+		                      ,IDGBI.SEQ_ID
+		                      ,IDGBI.ICUI_SEQ_ID
+		                      ,ICUI.LOGIN_ID AS LOGIN_ID
+		                      ,ICUI.NAME     AS USER_NAME
+		                      ,IDGBI.BONUS_APPLY_YEAR
+		                      ,IDGBI.BONUS_APPLY_YEAR AS YEAR
+		                      ,TO_CHAR(IDGBI.BONUS_OCCUR_START_DATE, 'YYYY-MM-DD') AS BONUS_OCCUR_START_DATE
+		                      ,TO_CHAR(IDGBI.BONUS_OCCUR_END_DATE, 'YYYY-MM-DD') AS BONUS_OCCUR_END_DATE
+		                      ,IDGBI.BONUS_DAY
+		                      ,IDGBI.BONUS_OCCUR_REASON
+		                      ,TO_CHAR(IDGBI.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE
+		                  FROM ITSM_DLM_GTM_BONUS_INFO IDGBI 
+		                     , ITSM_COM_USER_INFO ICUI
+		                  WHERE IDGBI.ICUI_SEQ_ID = ICUI.SEQ_ID
+		                  ORDER BY IDGBI.CREATE_DATE DESC, TO_NUMBER(ICUI.ORDER_NUM) 
+		                ) T1
+		                WHERE 1=1
+						<if test='p_login_id != null and !p_login_id.equalsIgnoreCase("")'>
+							AND T1.LOGIN_ID LIKE '%' || #{p_login_id} || '%'
+						</if>
+						<if test='p_name != null and !p_name.equalsIgnoreCase("")'> 
+		                	AND T1.USER_NAME LIKE '%' || #{p_name} || '%'
+						</if>
+		       ) T2
+		 WHERE PAGE = #{curPageNo}
+	</select>
+
+	<select id="getUserSelectBoxList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT SEQ_ID AS SB_VALUE
+			 , NAME AS SB_NAME
+		  FROM ITSM_COM_USER_INFO
+		 WHERE 1 = 1
+		   AND SM_MAN_FLAG = 'Y'
+		 ORDER BY TO_NUMBER(ORDER_NUM)
+	</select>
+	
+	<select id="gtmReqInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+			SELECT T2.*
+		      FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		              FROM (SELECT COUNT(*) OVER() AS CNT
+							              ,IDGRI.SEQ_ID
+							              ,IDGRI.ICUI_SEQ_ID
+							              ,ICUI.LOGIN_ID 
+							              ,ICUI.NAME AS USER_NAME
+							              ,TO_CHAR(IDGRI.REQ_DATE, 'YYYY-MM-DD') AS REQ_DATE
+							              ,IDGRI.VAC_TYPE
+							              ,(SELECT MEDIUM_CODE_KOR_NAME
+							                  FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+							                 WHERE ICCID.MEDIUM_TYPE = IDGRI.VAC_TYPE) AS VAC_TYPE_NAME
+							              ,TO_CHAR(IDGRI.VAC_START_DATE, 'YYYY-MM-DD') AS VAC_START_DATE
+							              ,TO_CHAR(IDGRI.VAC_END_DATE, 'YYYY-MM-DD') AS VAC_END_DATE
+							              ,IDGRI.VAC_REQ_DAY
+							              ,IDGRI.VAC_REQ_REASON
+							              ,IDGRI.STATUS
+							              ,(SELECT MEDIUM_CODE_KOR_NAME
+							                  FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+							                 WHERE ICCID.MEDIUM_TYPE = IDGRI.STATUS) AS STATUS_NAME
+							              ,IDGRI.VAC_APPROVER
+							              ,TO_CHAR(IDGRI.VAC_APPROVE_DATE, 'YYYY-MM-DD') AS VAC_APPROVE_DATE
+							  FROM ITSM_DLM_GTM_REQ_INFO IDGRI 
+							      ,ITSM_COM_USER_INFO ICUI
+							  WHERE IDGRI.ICUI_SEQ_ID = ICUI.SEQ_ID
+							 ORDER BY TO_NUMBER(ICUI.ORDER_NUM) , IDGRI.VAC_START_DATE
+		                    ) T1
+		                    WHERE 1=1
+		                    
+		                    <if test='loginId != approvalAdmin and !loginId.equalsIgnoreCase("admin")'>
+								AND T1.LOGIN_ID = #{loginId}
+							</if>
+	
+		                    <if test='p_login_id != null and !p_login_id.equalsIgnoreCase("")'>
+								AND T1.LOGIN_ID LIKE '%' || #{p_login_id} || '%'
+							</if>
+							<if test='p_name != null and !p_name.equalsIgnoreCase("")'> 
+			                	AND T1.USER_NAME LIKE '%' || #{p_name} || '%'
+							</if>
+							<if test='p_vac_type != null and !p_vac_type.equalsIgnoreCase("")'> 
+			                	AND T1.VAC_TYPE = #{p_vac_type}
+							</if>
+							<if test='p_status != null and !p_status.equalsIgnoreCase("")'> 
+			                	AND T1.STATUS = #{p_status}
+							</if>
+		           ) T2
+		     WHERE PAGE = #{curPageNo}
+	</select>
+	
+	<select id="getBonusDay" parameterType="java.util.Map" resultType="String" >
+		WITH CAL_BONUS AS
+		 (SELECT NVL(SUM(BONUS_DAY), 0) as BONUS_DAY
+		    FROM ITSM_DLM_GTM_BONUS_INFO
+		   WHERE ICUI_SEQ_ID = #{p_icui_seq_id}
+		     AND BONUS_APPLY_YEAR = TO_CHAR(SYSDATE, 'YYYY')
+		  ) SELECT BONUS_DAY - (SELECT NVL(SUM(VAC_REQ_DAY), 0)
+		                      FROM ITSM_DLM_GTM_REQ_INFO
+		                     WHERE ICUI_SEQ_ID = #{p_icui_seq_id}
+		                       AND VAC_TYPE = 'VAC_BON'
+		                       AND STATUS IN ('S', 'C')) AS BONUSDAY
+		  FROM CAL_BONUS
+	</select>
+	
+	<insert id="saveGtmReqInfo" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_DLM_GTM_REQ_INFO (
+		  	   SEQ_ID
+	  		 , ICUI_SEQ_ID 
+		     , REQ_DATE 
+		     , VAC_TYPE 
+		     , VAC_START_DATE 
+		     , VAC_END_DATE 
+		     , VAC_REQ_DAY 
+		     , VAC_REQ_REASON
+		     , STATUS
+		     , VAC_APPROVER
+		     , VAC_APPROVE_DATE 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_icui_seq_id}
+		     , TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		     , #{p_vac_type}
+		     , #{p_vac_start_date}
+		     , #{p_vac_end_date}
+		     , #{p_vac_req_day}
+		     , #{p_vac_req_reason}
+		     , 'R'
+		     , ''
+		     , ''
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<insert id="gtmReqSmsInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO UDS_MSG (
+		  	    CMID
+			  , UMID
+			  , MSG_TYPE
+			  , STATUS
+			  , REQUEST_TIME
+			  , SEND_TIME
+			  , DEST_PHONE
+			  , SEND_PHONE
+			  , MSG_BODY
+			  , DSPR_ID
+			  , MNU_ID
+			 )
+		VALUES(
+			    SMS_SEQ.NEXTVAL
+			  , NULL
+			  , 0
+			  , 0
+			  , SYSDATE
+			  , SYSDATE
+			  , #{approvalPhone}
+			  , '055-981-9547'
+			  , #{msg_body} 
+			  , 'GE_ADMIN'
+			  , 'DSM-ISP'
+		     )
+	</insert>
+	
+	<select id="gtmReqSmsAdminUser" parameterType="java.util.Map" resultType="String" >
+		SELECT SEQ_ID FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{approvalAdmin}
+	</select>
+	
+	<insert id="gtmReqSmsInsertInfo" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_SMS_NOTICE_INFO (
+		  	   SEQ_ID
+	  		 , SMS_TYPE 
+		     , ICUI_SEQ_ID 
+		     , CONTENTS 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+		     , #{p_sms_type}
+			 , #{p_icui_seq_id}
+			 , #{msg_body} 
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="saveGtmReqApproveProcess" parameterType="java.util.Map">
+		UPDATE ITSM_DLM_GTM_REQ_INFO
+		   SET STATUS 			  = #{p_status} 
+		   	  ,VAC_APPROVER		  = #{approvalAdmin}
+		   	  ,VAC_APPROVE_DATE	  = SYSDATE
+		      ,LAST_UPDATE_DATE   = SYSDATE
+		      ,LAST_UPDATE_BY     = #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<select id="getReqUserInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT TO_CHAR(IDGRI.REQ_DATE, 'YYYY-MM-DD') AS REQ_DATE
+			  ,IDGRI.ICUI_SEQ_ID
+		      ,(SELECT MEDIUM_CODE_KOR_NAME
+		          FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+		         WHERE ICCID.MEDIUM_TYPE = IDGRI.VAC_TYPE) AS VAC_TYPE_NAME
+		      ,(SELECT NAME
+		          FROM ITSM_COM_USER_INFO
+		         WHERE SEQ_ID = IDGRI.ICUI_SEQ_ID) AS USER_NAME
+		      ,(SELECT PHONE1
+		          FROM ITSM_COM_USER_INFO
+		         WHERE SEQ_ID = IDGRI.ICUI_SEQ_ID) AS PHONE
+		      ,(SELECT MEDIUM_CODE_KOR_NAME
+		          FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+		         WHERE ICCID.MEDIUM_TYPE = #{p_status}) AS STATUS_NAME    
+		  FROM ITSM_DLM_GTM_REQ_INFO IDGRI
+		 WHERE SEQ_ID = #{p_seq_id}
+	</select>
+	
+	<delete id="gtmReqDeleteProcess" parameterType="java.util.Map">
+  		DELETE FROM ITSM_DLM_GTM_REQ_INFO
+		 WHERE SEQ_ID = #{p_seq_id}
+  	</delete>
+  	
+  	<insert id="gtmBonusSmsInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO UDS_MSG (
+		  	    CMID
+			  , UMID
+			  , MSG_TYPE
+			  , STATUS
+			  , REQUEST_TIME
+			  , SEND_TIME
+			  , DEST_PHONE
+			  , SEND_PHONE
+			  , MSG_BODY
+			  , DSPR_ID
+			  , MNU_ID
+			 )
+		VALUES(
+			    SMS_SEQ.NEXTVAL
+			  , NULL
+			  , 0
+			  , 0
+			  , SYSDATE
+			  , SYSDATE
+			  , NVL((SELECT REPLACE(PHONE1,'-','') FROM ITSM_COM_USER_INFO WHERE SEQ_ID = #{icui_seq_id}),'010')
+			  , '055-981-9547'
+			  , #{msg_body} 
+			  , 'GE_ADMIN'
+			  , 'DSM-ISP'
+		     )
+	</insert>
+	
+	<insert id="gtmBonusSmsInsertInfo" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_SMS_NOTICE_INFO (
+		  	   SEQ_ID
+	  		 , SMS_TYPE 
+		     , ICUI_SEQ_ID 
+		     , CONTENTS 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+		     , #{p_sms_type}
+			 , #{icui_seq_id}
+			 , #{msg_body} 
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<insert id="popUpGtmReqInfoExcelImportAction" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_DLM_GTM_BASE_INFO (
+		  	   SEQ_ID
+	  		 , ICUI_SEQ_ID 
+		     , YEAR 
+		     , WORK_START_DATE 
+		     , WORK_END_DATE 
+		     , GUBUN 
+		     , GEN_USING_POSS_DAY 
+		     , SPE_USING_POSS_DAY 
+		     , PRE_YEAR_USING_DAY 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+		     , #{icui_seq_id}
+			 , #{year}
+			 , #{work_start_date} 
+			 , #{work_end_date} 
+			 , #{gubun} 
+			 , #{gen_using_poss_day} 
+			 , #{spe_using_poss_day} 
+			 , #{pre_year_using_day} 
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	
+  	
+</mapper>

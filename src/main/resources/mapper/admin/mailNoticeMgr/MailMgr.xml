@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="MailMgr">
+	
+	<resultMap id="mailNoticeMaps"  type="java.util.HashMap" >
+        <result column="contents" 	property="contents" 	javaType="java.lang.String" jdbcType="CLOB" />
+	</resultMap>
+
+	<select id="mailNoticeMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+						      ,SEQ_ID
+						      ,SEND_MAIL
+						      ,RECEIVER_MAIL
+						      ,SUBJECT
+						      ,TO_CHAR(SEND_DATE, 'YYYY-MM-DD HH24:MI') AS SEND_DATE
+						  FROM ITSM_COM_MAIL_NOTICE_INFO
+						 WHERE 1=1
+						 ORDER BY SEND_DATE DESC
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<select id="getMailNotice" parameterType="java.util.Map" resultMap="mailNoticeMaps" >
+		SELECT CONTENTS
+		  FROM ITSM_COM_MAIL_NOTICE_INFO
+		 WHERE SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+</mapper>

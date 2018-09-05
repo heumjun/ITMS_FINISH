@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="HolidayMgr">
+
+	<select id="holidayMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+						      ,SEQ_ID
+						      ,TITLE
+						      ,TO_CHAR(HOLIDAY, 'YYYY-MM-DD') AS HOLIDAY
+						      ,COMMENTS
+						      ,TO_CHAR(CREATE_DATE, 'YYYY-MM-DD') AS NOTI_START_DATE
+						  FROM ITSM_HOLIDAY_INFO
+						 WHERE 1=1
+						<if test='p_sel_year != null and !p_sel_year.equalsIgnoreCase("")'>
+							AND YEAR = #{p_sel_year}
+						</if>
+						 ORDER BY HOLIDAY
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}		
+	</select>
+
+</mapper>

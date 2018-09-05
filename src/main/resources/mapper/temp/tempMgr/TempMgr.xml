@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="TempMgr">
+
+	<select id="tempList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+								    ,ITTI.SEQ_ID
+								    ,ITTI.TEM_TITLE
+								   ,(SELECT D.MEDIUM_CODE_KOR_NAME 
+				                        FROM ITSM_COM_CODE_INFO_MASTER M, ITSM_COM_CODE_INFO_DETAIL D
+				                       WHERE 1 = 1
+				                         AND M.SEQ_ID = D.ICCIM_SEQ_ID
+				                         AND D.USE_YN = 'Y'
+				                         AND M.MAJOR_CODE = 'CC_M007'
+				                         AND D.MEDIUM_TYPE = ITTI.TEM_TYPE) AS TEM_TYPE_NAME
+				                    ,ITTI.TEM_TYPE
+								    ,(SELECT COUNT(*)
+								        FROM ITSM_COM_ATTACH_INFO
+								       WHERE REF_TABLE_SEQ_ID = ITTI.SEQ_ID) AS FILE_IMG
+								    ,(SELECT NAME
+								            FROM ITSM_COM_USER_INFO
+								           WHERE LOGIN_ID = ITTI.CREATED_BY) AS USER_NAME
+								    ,ITTI.CREATED_BY   
+								    ,TO_CHAR(ITTI.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE 
+								FROM ITSM_TEMPLATE_TB_INFO ITTI
+								WHERE 1=1
+						 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+				           AND ITTI.TEM_TITLE LIKE '%' || #{p_title} || '%'
+				         </if>
+				         ORDER BY ITTI.CREATE_DATE DESC
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<insert id="saveTempMgrInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_TEMPLATE_TB_INFO(
+		  	   SEQ_ID
+		  	 , ICUI_SEQ_ID  
+	  		 , TEM_TITLE
+	  		 , TEM_TYPE 
+		     , TEM_CONTENTS
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_icui_seq_id} 
+			 , #{p_title}
+			 , #{p_sel_temp}
+		     , #{p_contents}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="saveTempMgrUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_TEMPLATE_TB_INFO
+		   SET TEM_TITLE				= #{p_title}
+		      ,TEM_CONTENTS		= #{p_contents}
+		      ,TEM_TYPE				= #{p_sel_temp}
+		      ,LAST_UPDATE_DATE 	= SYSDATE
+		      ,LAST_UPDATE_BY   	= #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<insert id="saveTempMgrAttachInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_ATTACH_INFO (
+		  	   SEQ_ID
+		  	 , REF_TABLE_SEQ_ID  
+	  		 , FILE_PATH 
+		     , FILE_NAME
+		     , FILE_SIZE
+		     , FILE_TYPE
+		     , ORG_FILE_NAME
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{ref_table_seq_id} 
+			 , #{file_path}
+			 , #{file_name}
+			 , #{file_size}
+			 , #{file_type}
+		     , #{org_file_name}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+
+	<select id="getTempMgr" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT A.SEQ_ID AS SEQ
+		      ,A.ICUI_SEQ_ID
+		      ,A.TEM_TITLE
+		      ,A.TEM_CONTENTS
+		      ,A.TEM_TYPE 
+		      ,A.CREATED_BY
+		  FROM ITSM_TEMPLATE_TB_INFO A
+		 WHERE A.SEQ_ID = #{p_seq_id}
+  	</select>
+  	 	
+  	<select id="popUpTempMgrAttachList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT, SEQ_ID, ORG_FILE_NAME, FILE_PATH, ROUND(FILE_SIZE/1024,1) AS FILE_SIZE
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+  	<select id="selectFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT ORG_FILE_NAME, FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</select>
+  	
+  	<delete id="refAttachFileDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</delete>  	
+  	
+  	<select id="getAttachFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</select>
+  	
+  	<delete id="tempMgrAttachDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</delete>  	
+  	
+  	<delete id="tempMgrDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_TEMPLATE_TB_INFO
+		 WHERE SEQ_ID = #{seq_id}
+  	</delete>
+  	
+</mapper>

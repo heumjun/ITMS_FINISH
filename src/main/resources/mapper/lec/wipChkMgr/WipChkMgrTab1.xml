@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab1">
+
+	<!-- 1.tab : Conc Monitoring --> 
+	<!-- Concurrent Schedule -->
+	<select id="wipChkMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			 SELECT A.STATUS_CODE                                                    STATUS
+			      ,(SELECT  FLV.MEANING
+			        FROM    FND_LOOKUP_VALUES FLV
+			        WHERE   FLV.LOOKUP_TYPE IN ('CP_STATUS_CODE')
+			        AND     FLV.LOOKUP_CODE = A.STATUS_CODE
+			        AND     FLV.START_DATE_ACTIVE IS NOT NULL)                      STATUS_NAME
+			      ,A.PHASE_CODE                                                     PHASE
+			      ,(SELECT  FLV.MEANING
+			        FROM    FND_LOOKUP_VALUES FLV
+			        WHERE   FLV.LOOKUP_TYPE IN ('CP_PHASE_CODE')
+			        AND     FLV.LOOKUP_CODE = A.PHASE_CODE
+			        AND     FLV.START_DATE_ACTIVE IS NOT NULL)                      PHASE_NAME
+			      ,A.REQUESTOR                                                      REQUESTOR
+			      ,D.USER_EXECUTABLE_NAME                                           EXECUTABLE_NAME
+			      ,A.PROGRAM_SHORT_NAME                                             PROGRAM_SHORT_NAME
+			      ,A.PROGRAM                                                        PROGRAM
+			      ,TO_CHAR(MAX(A.ACTUAL_START_DATE), 'YYYY-MM-DD HH24:MI' )         START_DATE
+            	  ,TO_CHAR(MAX(A.ACTUAL_COMPLETION_DATE), 'YYYY-MM-DD HH24:MI' )    COMPLETION_DATE
+			      ,(MAX(A.ACTUAL_COMPLETION_DATE) - MAX(A.ACTUAL_START_DATE))*86400 SECOND
+			      ,ROUND((NVL(MAX(A.ACTUAL_COMPLETION_DATE),SYSDATE)
+			                - MAX(A.ACTUAL_START_DATE)) * 86400/60, 1)              MINUTE
+			      ,A.COMPLETION_TEXT                                                COMPLETION_TEXT
+			      ,A.ARGUMENT_TEXT                                                  ARGUMENT_TEXT
+			      ,UPPER(E.EXECUTION_FILE_NAME)                                     FILE_NAME
+			      ,F.REQUEST_ID                                                     REQUEST_ID
+			      ,TRUNC(F.RESUBMIT_INTERVAL)||' / '||F.RESUBMIT_INTERVAL_UNIT      INTERVAL_UNIT
+			      ,F.RESUBMIT_INTERVAL_TYPE                                         INTERVAL_TYPE
+			FROM   FND_CONC_REQ_SUMMARY_V  A
+			      ,(SELECT PROGRAM_SHORT_NAME
+			              ,MAX(ACTUAL_COMPLETION_DATE) ACTUAL_COMPLETION_DATE
+			        FROM   FND_CONC_REQ_SUMMARY_V
+			        WHERE  1 = 1
+			        AND    (PROGRAM_SHORT_NAME IN ('FNDWFBG','FNDWFPR','POCFH','INCOIN','REQIMPORT','POXPOPDOI','RVCTP','WICMLP','ALEPPE'
+			                                      ,'BMCOIN','CMCTCM','INCTCM','INCTCW','POCFH')
+			             OR PROGRAM_SHORT_NAME IN ('ZPJMPMPDIP','ZDCMPA249','ZFINCMIBPI','ZFINAPNDIF','EGLC005','ZPJMPMRMON')
+			             OR PROGRAM_SHORT_NAME LIKE '%WIP%' 
+			             OR PROGRAM_SHORT_NAME LIKE '%MFG%' 
+			             OR PROGRAM_SHORT_NAME LIKE '%XPDM%' 
+			             OR PROGRAM_SHORT_NAME LIKE 'MR%'
+			             OR PROGRAM_SHORT_NAME LIKE '%ZOAS%') 
+			        AND    REQUEST_DATE >= SYSDATE-3
+			        GROUP BY PROGRAM_SHORT_NAME)    B
+			      ,APPLSYS.FND_CONCURRENT_PROGRAMS  C
+			      ,APPLSYS.FND_EXECUTABLES_TL       D
+			      ,FND_EXECUTABLES_FORM_V           E
+			      ,FND_CONC_REQUESTS_FORM_V F
+			WHERE  1 = 1
+			AND    A.REQUEST_DATE          >= SYSDATE-3
+			AND    A.PROGRAM_SHORT_NAME     = B.PROGRAM_SHORT_NAME
+			AND    A.ACTUAL_COMPLETION_DATE = B.ACTUAL_COMPLETION_DATE
+			AND    A.CONCURRENT_PROGRAM_ID  = C.CONCURRENT_PROGRAM_ID
+			AND    C.EXECUTABLE_ID          = D.EXECUTABLE_ID
+			AND    D.EXECUTABLE_ID          = E.EXECUTABLE_ID
+			AND    A.REQUEST_ID             = F.REQUEST_ID
+			GROUP BY D.USER_EXECUTABLE_NAME
+			        ,A.PROGRAM_SHORT_NAME
+			        ,A.PROGRAM
+			        ,A.COMPLETION_TEXT
+			        ,A.REQUESTOR
+			        ,A.STATUS_CODE
+			        ,A.PHASE_CODE
+			        ,A.ARGUMENT_TEXT
+			        ,E.EXECUTION_FILE_NAME
+			        ,F.REQUEST_ID
+			        ,F.RESUBMIT_INTERVAL
+			        ,F.RESUBMIT_INTERVAL_UNIT
+			        ,F.RESUBMIT_INTERVAL_TYPE
+			ORDER BY D.USER_EXECUTABLE_NAME
+	]]> 
+  	</select>
+  	
+  	<update id="sessionLangUpdate" parameterType="java.util.Map">
+		ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN'
+	</update>
+  	
+  	
+</mapper>

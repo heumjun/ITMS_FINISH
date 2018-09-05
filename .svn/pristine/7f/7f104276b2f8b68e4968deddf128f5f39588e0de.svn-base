@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SmsSendServiceMgr">
+
+	<select id="smsSendServiceMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		          FROM (SELECT COUNT(*) OVER() AS CNT
+		                      ,'' AS SEQ_ID
+	          			      ,ICUI.SEQ_ID AS ICUI_SEQ_ID
+	          				  ,ICUI.NAME   AS RECEIVER_NAME
+					          ,ICSNI.CONTENTS
+						    FROM ITSM_COM_SMS_NOTICE_INFO ICSNI, 
+						         ITSM_COM_USER_INFO ICUI
+						    WHERE 1=2
+		                	 AND ICSNI.ICUI_SEQ_ID = ICUI.SEQ_ID(+)      
+		                ) T1
+		       ) T2
+		 WHERE PAGE = #{curPageNo}
+		 		 
+	</select>
+
+	<select id="getUserSelectBoxList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T1.*
+	  	FROM
+	  	(
+	    	SELECT 'ALL' 		AS SB_VALUE
+	               ,'SM인원 전체' 	AS SB_NAME
+	               ,'1'         AS ORDER_NUM
+	               ,'1' 	    AS ORDER_NUM2 
+	       	FROM DUAL
+	       	
+	   		UNION ALL
+	
+		    SELECT 'E'	 			AS SB_VALUE
+	               ,'ERP SM인원 전체' 	AS SB_NAME
+	               ,'2'         	AS ORDER_NUM 
+	               ,'2' 	    	AS ORDER_NUM2 
+	       	FROM DUAL
+	       	
+	   		UNION ALL
+	   		
+	    	SELECT 'L'	 				AS SB_VALUE
+	               ,'LEGACY SM인원 전체' 	AS SB_NAME
+	               ,'3'         		AS ORDER_NUM 
+	               ,'3' 	    		AS ORDER_NUM2 
+	       	FROM DUAL
+	       	
+	   		UNION ALL
+	   			   		
+	    	SELECT  ICUI.SEQ_ID 	AS SB_VALUE
+	               ,ICUI.NAME 		AS SB_NAME
+	               ,'4'             AS ORDER_NUM
+	               ,ICUI.ORDER_NUM 	AS ORDER_NUM2
+	 		FROM ITSM_COM_USER_INFO ICUI
+			WHERE 1 = 1
+	  		AND ICUI.SM_MAN_FLAG = 'Y'
+		)T1
+        ORDER BY T1.ORDER_NUM, TO_NUMBER(T1.ORDER_NUM2)
+	</select>
+
+	<select id="getSmUserList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+    	SELECT  ICUI.SEQ_ID	
+ 		FROM ITSM_COM_USER_INFO ICUI
+		WHERE 1 = 1
+  		AND ICUI.SM_MAN_FLAG = 'Y'
+  		
+		 <if test='icui_seq_id != null and !icui_seq_id.equalsIgnoreCase("") and !icui_seq_id.equalsIgnoreCase("ALL")'>
+		 	AND ICUI.ERP_LEGACY_GUBUN = #{icui_seq_id}
+		 </if>
+  		
+  		ORDER BY ICUI.ORDER_NUM
+	</select>
+</mapper>

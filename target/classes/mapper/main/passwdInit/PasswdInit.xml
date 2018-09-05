@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="PasswdInit">
+
+	<select id="selectUserConfirm" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap">
+		SELECT ICUI.SEQ_ID
+      		  ,ICUI.NAME
+			  ,ICUI.LOGIN_ID AS LOGIN_ID
+			  ,dbms_random.string('A',10) AS INIT_PASSWORD
+			  ,ICUI.E_MAIL AS E_MAIL
+			  ,ICUI.PHONE1 AS PHONE1
+		      ,COUNT(*) OVER() AS CNT
+		  FROM ITSM_COM_USER_INFO ICUI
+		 WHERE ICUI.LOGIN_ID = #{p_login_id}
+		   AND ICUI.QUESTION = #{p_sel_question}
+		   AND ANSWER = #{p_answer}
+  	</select>
+
+	<update id="updateUserPasswd" parameterType="java.util.Map">
+		UPDATE ITSM_COM_USER_INFO
+		   SET PASSWORD = #{init_password}
+		 WHERE SEQ_ID = #{seq_id}
+	</update>
+	
+	<insert id="passwdInitSmsInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO UDS_MSG (
+		  	    CMID
+			  , UMID
+			  , MSG_TYPE
+			  , STATUS
+			  , REQUEST_TIME
+			  , SEND_TIME
+			  , DEST_PHONE
+			  , SEND_PHONE
+			  , MSG_BODY
+			  , DSPR_ID
+			  , MNU_ID
+			 )
+		VALUES(
+			    SMS_SEQ.NEXTVAL
+			  , NULL
+			  , 0
+			  , 0
+			  , SYSDATE
+			  , SYSDATE
+			  , #{phone}
+			  , '055-981-9547'
+			  , #{msg_body} 
+			  , 'GE_ADMIN'
+			  , 'DSM-ISP'
+		     )
+	</insert>
+
+</mapper>

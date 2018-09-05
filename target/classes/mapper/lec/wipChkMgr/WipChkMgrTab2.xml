@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab2">
+
+	<!-- 2.tab : ETC Monitoring --> 
+	<!-- Concurrent Error -->
+  	<select id="wipChkMgrList1" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT A.STATUS_CODE                                                    STATUS
+		      ,(SELECT  FLV.MEANING
+		        FROM    FND_LOOKUP_VALUES FLV
+		        WHERE   FLV.LOOKUP_TYPE IN ('CP_STATUS_CODE')
+		        AND     FLV.LOOKUP_CODE = A.STATUS_CODE
+		        AND     FLV.START_DATE_ACTIVE IS NOT NULL)                      STATUS_NAME
+		      ,A.PHASE_CODE                                                     PHASE
+		      ,(SELECT  FLV.MEANING
+		        FROM    FND_LOOKUP_VALUES FLV
+		        WHERE   FLV.LOOKUP_TYPE IN ('CP_PHASE_CODE')
+		        AND     FLV.LOOKUP_CODE = A.PHASE_CODE
+		        AND     FLV.START_DATE_ACTIVE IS NOT NULL)                      PHASE_NAME
+		      ,A.REQUESTOR                                                      REQUESTOR
+		      ,A.PROGRAM_SHORT_NAME                                             PROGRAM_SHORT_NAME
+		      ,A.PROGRAM                                                        PROGRAM
+		      ,TO_CHAR(A.ACTUAL_START_DATE, 'YYYY-MM-DD HH24:MI' )              START_DATE
+		      ,TO_CHAR(A.ACTUAL_COMPLETION_DATE, 'YYYY-MM-DD HH24:MI' ) 		COMPLETION_DATE
+		      ,A.COMPLETION_TEXT                                                COMPLETION_TEXT
+		      ,A.ARGUMENT_TEXT
+		      ,UPPER(E.EXECUTION_FILE_NAME)                                     FILE_NAME
+		      ,F.REQUEST_ID
+		      ,TRUNC(F.RESUBMIT_INTERVAL)||' / '||F.RESUBMIT_INTERVAL_UNIT      INTERVAL_UNIT
+		      ,F.RESUBMIT_INTERVAL_TYPE                                         INTERVAL_TYPE
+		FROM   FND_CONC_REQ_SUMMARY_V            A
+		      ,APPLSYS.FND_CONCURRENT_PROGRAMS   C
+		      ,APPLSYS.FND_EXECUTABLES_TL        D
+		      ,FND_EXECUTABLES_FORM_V            E
+		      ,FND_CONC_REQUESTS_FORM_V          F
+		WHERE  1 = 1
+		AND    (A.PROGRAM_SHORT_NAME IN ('FNDWFBG','FNDWFPR','POCFH','INCOIN','REQIMPORT','POXPOPDOI','RVCTP','WICMLP','ALEPPE'
+		                                ,'BMCOIN','CMCTCM','INCTCM','INCTCW','POCFH')
+		     OR A.PROGRAM_SHORT_NAME IN ('ZPJMPMPDIP','ZDCMPA249','ZFINCMIBPI','ZFINAPNDIF','EGLC005','ZPJMPMRMON')
+		     OR A.PROGRAM_SHORT_NAME LIKE '%WIP%' 
+		     OR A.PROGRAM_SHORT_NAME LIKE '%MFG%' 
+		     OR A.PROGRAM_SHORT_NAME LIKE '%XPDM%' 
+		     OR A.PROGRAM_SHORT_NAME LIKE 'MR%'
+		     OR A.PROGRAM_SHORT_NAME LIKE '%ZOAS%')
+		AND    (A.STATUS_CODE NOT IN ('C','I') OR A.PHASE_CODE NOT IN ('P','C'))
+		AND    A.REQUEST_DATE         >= SYSDATE-3
+		AND    A.CONCURRENT_PROGRAM_ID = C.CONCURRENT_PROGRAM_ID
+		AND    C.EXECUTABLE_ID         = D.EXECUTABLE_ID
+		AND    D.EXECUTABLE_ID         = E.EXECUTABLE_ID
+		AND    A.REQUEST_ID            = F.REQUEST_ID
+		ORDER BY A.PROGRAM_SHORT_NAME, A.ACTUAL_START_DATE DESC
+	]]>       
+  	</select>
+  	
+  	<!-- Lock Session -->
+  	<select id="wipChkMgrList2" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT OWNER || '.' || OBJECT_NAME                                          OBJECT_NAME
+		      ,OS_USER_NAME                                                         TERMINAL
+		      ,ORACLE_USERNAME                                                      LOCKER
+		      ,PROGRAM                                                              PROGRAM
+		      ,NVL(LOCKWAIT, 'ACTIVE')                                              LOCKWAIT
+		      ,DECODE(LOCKED_MODE,2,'ROW SHARE',3,'ROW EXCLUSIVE',4,'SHARE'
+		                         ,5,'SHARE ROW EXCLUSIVE',6,'EXCLUSIVE','UNKNOWN')  LOCKMODE
+		      ,OBJECT_TYPE                                                          OBJECT_TYPE
+		      ,SESSION_ID                                                           SESSION_ID
+		      ,SERIAL#                                                              SERIAL
+		      ,C.SID                                                                SID
+		FROM   SYS.V_$LOCKED_OBJECT  A
+		      ,SYS.ALL_OBJECTS       B
+		      ,SYS.V_$SESSION        C
+		WHERE  A.OBJECT_ID = B.OBJECT_ID
+		AND    C.SID       = A.SESSION_ID
+		ORDER BY 1 ASC, 5 DESC
+	]]>         
+  	</select>
+  	
+</mapper>

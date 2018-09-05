@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab3">
+
+  	<!-- 3.tab : Interface1 -->
+  	<!-- BOM -->
+  	<select id="wipChkMgrList3" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT BOM.ORGANIZATION_ID
+		      ,BOM.ASSEMBLY_TYPE
+		      ,BOM.ITEM_NUMBER
+		      ,BOM.ALTERNATE_BOM_DESIGNATOR
+		      ,BOM.TRANSACTION_TYPE
+		      ,BOM.PROCESS_FLAG
+		      ,BOM.LAST_UPDATE_DATE
+		      ,BOM.LAST_UPDATED_BY
+		      ,BOM.CREATION_DATE
+		      ,BOM.CREATED_BY
+		      ,BOM.LAST_UPDATE_LOGIN
+		      ,BOM.BATCH_ID
+		      ,BIC.COMPONENT_QUANTITY
+		      ,BIC.COMPONENT_ITEM_NUMBER
+		      ,BIC.ASSEMBLY_ITEM_NUMBER
+		      ,BIC.PROCESS_FLAG
+		      ,BIC.TRANSACTION_TYPE
+		FROM   BOM_BILL_OF_MTLS_INTERFACE     BOM
+		      ,BOM_INVENTORY_COMPS_INTERFACE  BIC
+		WHERE  BOM.BATCH_ID       = BIC.BATCH_ID
+		AND    BOM.CREATION_DATE >= TRUNC(SYSDATE,'MONTH')
+	]]>          
+  	</select>
+  	
+  	<!-- ROUTING -->
+  	<select id="wipChkMgrList4" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT BOR.ORGANIZATION_ID
+		      ,BOR.CFM_ROUTING_FLAG
+		      ,BOR.ASSEMBLY_ITEM_NUMBER
+		      ,BOR.ALTERNATE_ROUTING_DESIGNATOR
+		      ,BOR.ROUTING_TYPE
+		      ,BOR.TRANSACTION_TYPE
+		      ,BOR.PROCESS_FLAG
+		      ,BOR.COMPLETION_SUBINVENTORY
+		      ,BOR.CREATION_DATE
+		      ,BOR.CREATED_BY
+		      ,(SELECT FU.DESCRIPTION
+		        FROM   FND_USER FU
+		        WHERE  FU.USER_ID = BOR.CREATED_BY
+		        AND    ROWNUM     = 1)  CREATED_NAME
+		      ,BOR.BATCH_ID
+		      ,BOS.STANDARD_OPERATION_ID
+		      ,BOS.OPERATION_SEQ_NUM
+		      ,BOS.OPERATION_DESCRIPTION
+		      ,BOS.MINIMUM_TRANSFER_QUANTITY
+		      ,BOS.DEPARTMENT_CODE
+		      ,BOS.REFERENCE_FLAG
+		      ,BOS.EFFECTIVITY_DATE
+		      ,BOI.OPERATION_SEQ_NUM
+		      ,BOI.RESOURCE_CODE
+		      ,BOI.USAGE_RATE_OR_AMOUNT
+		      ,BOI.SCHEDULE_FLAG
+		      ,BOI.BASIS_TYPE
+		      ,BOI.AUTOCHARGE_TYPE
+		      ,BOI.STANDARD_RATE_FLAG
+		FROM   BOM_OP_ROUTINGS_INTERFACE   BOR
+		      ,BOM_OP_SEQUENCES_INTERFACE  BOS
+		      ,BOM_OP_RESOURCES_INTERFACE  BOI
+		WHERE  BOR.BATCH_ID          = BOS.BATCH_ID
+		AND    BOS.BATCH_ID          = BOI.BATCH_ID
+		AND    BOS.OPERATION_SEQ_NUM = BOI.OPERATION_SEQ_NUM
+		AND    BOR.CREATION_DATE    >= TRUNC(SYSDATE,'MON')
+		AND    BOR.PROCESS_FLAG     <> 1
+		ORDER BY BOR.ASSEMBLY_ITEM_NUMBER, BOS.OPERATION_SEQ_NUM
+	]]>          
+  	</select>
+  	
+  	<!-- JOB -->
+  	<select id="wipChkMgrList5" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT X.INTERFACE_ID
+		      ,X.GROUP_ID
+		      ,X.WIP_ENTITY_ID
+		      ,X.JOB_NAME
+		      ,X.DESCRIPTION
+		      ,X.CREATION_DATE
+		      ,X.CREATED_BY
+		      ,(SELECT FU.DESCRIPTION
+		        FROM   FND_USER FU
+		        WHERE  FU.USER_ID = X.CREATED_BY
+		        AND    ROWNUM     = 1)  CREATED_NAME
+		      ,X.LOAD_TYPE
+		      ,X.STATUS_TYPE
+		      ,X.START_QUANTITY
+		      ,X.ALLOW_EXPLOSION
+		      ,X.FIRST_UNIT_START_DATE
+		      ,X.HEADER_ID
+		      ,X.PROCESS_PHASE
+		      ,X.PROCESS_STATUS
+		      ,X.SOURCE_CODE
+		      ,X.PRIMARY_ITEM_ID
+		      ,(SELECT MSI.SEGMENT1
+		        FROM   MTL_SYSTEM_ITEMS_B MSI
+		        WHERE  MSI.ORGANIZATION_ID   = X.ORGANIZATION_ID
+		        AND    MSI.INVENTORY_ITEM_ID = X.PRIMARY_ITEM_ID) ITEM_CODE
+		      ,X.PROJECT_ID
+		      ,(SELECT PPA.SEGMENT1
+		        FROM   PA_PROJECTS_ALL PPA
+		        WHERE  PPA.PROJECT_ID = X.PROJECT_ID) PROJECT_NUM
+		      ,X.TASK_ID
+		      ,(SELECT PT.TASK_NUMBER
+		        FROM   PA_TASKS PT
+		        WHERE  PT.TASK_ID = X.TASK_ID) TASK_NUM
+		FROM   WIP_JOB_SCHEDULE_INTERFACE X
+		WHERE  CREATION_DATE  >= TRUNC(SYSDATE,'MON')
+		AND    PROCESS_STATUS <> 1
+		ORDER BY CREATION_DATE DESC
+	]]>          
+  	</select>
+  	
+  	<!-- MDS Schedule -->
+  	<select id="wipChkMgrList6" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT MSI.SCHEDULE_DESIGNATOR
+		      ,MSI.ERROR_MESSAGE
+		      ,MSI.PROCESS_STATUS
+		      ,MSI.PROJECT_ID
+		      ,MSI.TASK_ID
+		      ,MSI.INVENTORY_ITEM_ID
+		      ,MSI.SCHEDULE_QUANTITY
+		      ,MSI.CREATED_BY
+		      ,FU1.DESCRIPTION        CREATED_NAME
+		      ,MSI.LAST_UPDATED_BY
+		      ,FU2.DESCRIPTION        LAST_UPDATED_NAME
+		      ,MSI.SCHEDULE_DATE
+		      ,MSI.NEW_SCHEDULE_DATE
+		      ,MSI.SCHEDULE_COMMENTS
+		FROM   MRP.MRP_SCHEDULE_INTERFACE  MSI
+		      ,FND_USER                    FU1
+		      ,FND_USER                    FU2
+		WHERE  1 = 1
+		AND    MSI.CREATED_BY      = FU1.USER_ID
+		AND    MSI.LAST_UPDATED_BY = FU2.USER_ID
+		AND    MSI.CREATION_DATE  >= TRUNC(SYSDATE,'MON')
+		AND    ERROR_MESSAGE IS NOT NULL
+	]]>          
+  	</select>
+  	
+  	<!-- WIP Resource Transaction  -->
+  	<select id="wipChkMgrList7" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT WCTI.SOURCE_CODE
+		      ,WCTI.SOURCE_LINE_ID
+		      ,WCTI.TRANSACTION_ID
+		      ,WCTI.ORGANIZATION_CODE
+		      ,WCTI.WIP_ENTITY_NAME
+		      ,WCTI.OPERATION_SEQ_NUM
+		      ,WCTI.RESOURCE_SEQ_NUM
+		      ,WCTI.TRANSACTION_QUANTITY
+		      ,WCTI.TRANSACTION_UOM
+		      ,WCTI.TRANSACTION_DATE
+		      ,WCTI.CREATION_DATE
+		      ,WCTI.LAST_UPDATE_DATE
+		      ,WCTI.PROCESS_STATUS
+		      ,APPS.XEAM_COMMON_PKG.GET_LOOKUP_MEANING_FUNC('WIP_PROCESS_STATUS', WCTI.PROCESS_STATUS) PROCESS_STATUS_MEAN
+		      ,WTIE.ERROR_MESSAGE
+		      ,FU.DESCRIPTION
+		FROM   WIP_COST_TXN_INTERFACE     WCTI
+		      ,WIP_TXN_INTERFACE_ERRORS   WTIE
+		      ,FND_USER                   FU
+		WHERE  WCTI.TRANSACTION_ID = WTIE.TRANSACTION_ID(+)
+		AND    WCTI.CREATED_BY     = FU.USER_ID(+)
+	]]>          
+  	</select>
+  	
+</mapper>

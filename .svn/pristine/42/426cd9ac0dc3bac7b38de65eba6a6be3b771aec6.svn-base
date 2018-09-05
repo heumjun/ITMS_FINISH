@@ -1,0 +1,210 @@
+package com.web.common.util;
+
+import java.io.StringWriter;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.VelocityEngine;
+import org.springframework.mail.javamail.JavaMailSender;
+
+import com.web.common.command.CommandMap;
+import com.web.common.constants.Constants;
+import com.web.common.dao.CommonDAO;
+import com.web.common.exceptionHandler.CommonException;
+
+/**
+ * @파일명 : DisMailUtil.java
+ * @프로젝트 : gePower
+ * @날짜 : 2015. 12. 17.
+ * @작성자 : 조 흠준
+ * @설명
+ * 
+ *     <pre>
+ * 	메일 발송에 관한 Util
+ *     </pre>
+ */
+public class MailUtil
+{
+
+	@Resource(name = "mailSender")
+	private static JavaMailSender mailSender;
+	
+	@Resource(name = "velocityEngine")
+	private static VelocityEngine velocityEngine;
+	
+	@Resource(name = "commonDAO")
+	private static CommonDAO commonDAO;
+
+	public void setMailSender(JavaMailSender mailSender)
+	{
+		MailUtil.mailSender = mailSender;
+	}
+
+	/*@RequestMapping(value = "/mailSender")
+	public static void sendEmail(CommandMap commandMap) throws AddressException, MessagingException
+	{
+
+		String fromEmail = (String) commandMap.get("fromEmail");
+		String toEmail = (String) commandMap.get("toEmail");
+		//String ccEmail = (String) commandMap.get("ccEmail");
+		String subject = (String) commandMap.get("subject");
+		String body = (String) commandMap.get("body");
+
+		// 네이버일 경우 smtp.naver.com,smtp.gmail.com 을 입력합니다.
+		String host = MessageUtil.getMessage("mail.smtp.host");
+		// 네이버 아이디를 입력해주세요. @nave.com은 입력하지 마시고요
+		final String username = MessageUtil.getMessage("mail.admin.username");
+		// 네이버 이메일 비밀번호를 입력해주세요.
+		final String password = MessageUtil.getMessage("mail.admin.password");
+		// 포트번호
+		int port = Integer.parseInt(MessageUtil.getMessage("mail.smtp.port"));
+
+		Properties props = System.getProperties();
+		// 정보를 담기 위한 객체 생성
+		// SMTP 서버 정보 설정
+		props.put("mail.smtp.host", host);
+		props.put("mail.smtp.port", port);
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.ssl.enable", "true");
+		props.put("mail.smtp.ssl.trust", host);
+
+		// Session 생성
+		Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator() {
+			String	un	= username;
+			String	pw	= password;
+
+			protected javax.mail.PasswordAuthentication getPasswordAuthentication()
+			{
+				return new javax.mail.PasswordAuthentication(un, pw);
+			}
+		});
+		// for debug
+		session.setDebug(Boolean.valueOf(MessageUtil.getMessage("mail.smtp.debug"))); 
+
+		// MimeMessage 생성
+		MimeMessage mimeMessage = new MimeMessage(session);
+		// 발신자 셋팅, 보내는 사람의 이메일주소를 한번 더 입력합니다. 이때는 이메일 풀 주소를 다 작성해주세요.
+		mimeMessage.setFrom(new InternetAddress(fromEmail));
+
+		// 수신자셋팅
+		// .TO 외에 .CC(참조) .BCC(숨은참조) 도 있음
+		mimeMessage.setRecipient(Message.RecipientType.TO, new InternetAddress(toEmail));
+
+		mimeMessage.setSubject(subject, "UTF-8");
+		mimeMessage.setText(body, "UTF-8", "html");
+		// 내용셋팅
+		Transport.send(mimeMessage); // javax.mail.Transport.send() 이용
+
+	}*/
+	
+	/**
+	 * 
+	 * @메소드명	: sendMail
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			ERP 메일 전송
+	 * 	</pre>
+	 * @param commandMap
+	 * @return
+	 * @throws CommonException
+	 */
+	public static void sendMail(CommandMap commandMap) throws CommonException 
+	{
+		// system.properties 에서 메일설정이 Y가 되어있어야 발송
+		if(StringUtil.nullString(MessageUtil.getMessage("common.mailSendSwitch")).equals("Y")) 
+		{
+			// 결과값 최초
+			String result = Constants.RESULT_SUCCESS;
+
+			// 메일 보내기(loginId) SET_DB_LOGIN_ID, APPROVAL_ADMIN
+			Map<String, String> resultMap = commonDAO.getUserMail(commandMap.getMap());
+			
+			Template template = velocityEngine.getTemplate(commandMap.get("p_template").toString(), "UTF-8");
+			VelocityContext velocityContext = new VelocityContext();
+			velocityContext.put("conStatus", "R");
+			velocityContext.put("title", commandMap.get("p_title"));
+			velocityContext.put("contents", commandMap.get("p_contents"));
+			velocityContext.put("user_name", resultMap.get("user_name"));
+			velocityContext.put("create_date", resultMap.get("create_date"));
+			
+			StringWriter stringWriter = new StringWriter();
+			template.merge(velocityContext, stringWriter);
+			
+			commandMap.put("i_sender", commandMap.get("create_mail"));
+			commandMap.put("i_receiver", resultMap.get("create_mail"));
+			commandMap.put("i_message", stringWriter.toString());
+			commandMap.put("i_subject", commandMap.get("p_title"));
+			
+			String sErrCode = "";
+			
+			commonDAO.sendMail(commandMap.getMap());
+			sErrCode = StringUtil.nullString(commandMap.get("o_err"));
+			
+			System.out.println("sErrCode : " + sErrCode);
+			
+			// 오류가 있으면 스탑
+			if (!"".equals(sErrCode)) 
+			{
+				result = Constants.RESULT_FAIL;
+			}
+
+			if (result.equals(Constants.RESULT_SUCCESS))
+			{
+				//Map<String, String> map = new HashMap<String, String>();
+				//map.put(Constants.RESULT_KEY, Constants.RESULT_SUCCESS);
+				//map.put(Constants.RESULT_MASAGE_KEY, "처리가 완료 되었습니다.");
+				//map.put("ref_table_seq_id", (String) commandMap.get(Constants.SEQ_ID));
+				//
+				//return map;
+				System.out.println("메일전송성공");
+			}
+			else if (result.equals(Constants.RESULT_FAIL))
+			{
+				// 실패한경우(실패 메시지가 없는 경우)
+				throw new CommonException();
+			}
+			else
+			{
+				// 실패한경우(실패 메시지가 있는 경우)
+				throw new CommonException(result);
+			}
+		}
+		
+	}
+
+	// 스프링을 이용한 메일 보내기 개인서버 전용으로 전환시
+	/*
+	 * public static void sendEmail1(CommandMap commandMap) throws Exception {
+	 * 
+	 * // String fromEmail = (String) commandMap.get("fromEmail"); String
+	 * fromEmail = "jjs6582@gmail.com"; String toEmail = (String)
+	 * commandMap.get("toEmail"); String ccEmail = (String)
+	 * commandMap.get("ccEmail"); String subject = (String)
+	 * commandMap.get("subject"); String body = (String) commandMap.get("body");
+	 * 
+	 * System.out.println(">>> " + fromEmail); System.out.println(">>> " +
+	 * toEmail); System.out.println(">>> " + ccEmail); System.out.println(">>> "
+	 * + subject); System.out.println(">>> " + body);
+	 * 
+	 * MimeMessage message = mailSender.createMimeMessage();
+	 * 
+	 * if (Constants.Y.equals(MessageUtil.getMessage("mail.test"))) {
+	 * message.addRecipients(RecipientType.TO, "heumjoon.cho@doosan.com"); }
+	 * else { message.addRecipients(RecipientType.TO, toEmail);
+	 * message.addRecipients(RecipientType.CC, ccEmail); }
+	 * 
+	 * message.setFrom(new InternetAddress("jjs6582@gmail.com"));
+	 * message.setSubject(subject, "UTF-8"); message.setText(body, "UTF-8",
+	 * "html");
+	 * 
+	 * try { mailSender.send(message); } catch (MailException e) {
+	 * e.printStackTrace(); }
+	 * 
+	 * }
+	 */
+}

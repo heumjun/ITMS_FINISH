@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ReferRoomMgr">
+
+	<select id="getMainRefRoomList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		<![CDATA[
+		SELECT *
+  		  FROM ( 
+			SELECT IIRRI.SEQ_ID
+			      ,IIRRI.TITLE
+			      ,(SELECT COUNT(*)
+			          FROM ITSM_COM_ATTACH_INFO
+			         WHERE REF_TABLE_SEQ_ID = IIRRI.SEQ_ID) AS FILE_IMG
+			      ,(SELECT NAME
+			          FROM ITSM_COM_USER_INFO
+			         WHERE LOGIN_ID = IIRRI.CREATED_BY) AS USER_NAME
+			      ,IIRRI.LAST_UPDATE_BY
+			      ,TO_CHAR(LAST_UPDATE_DATE, 'YYYY-MM-DD AM HH24:MI') AS LAST_UPDATE_DATE
+			      ,CASE
+	                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+	                  'N'
+	                 ELSE
+	                  'Y'
+	               END  AS NEW_IMG
+			  FROM ITSM_IS_RESOURCE_ROOM_INFO IIRRI
+			 WHERE 1 = 1
+			 ORDER BY LAST_UPDATE_DATE DESC
+			) AA
+		 WHERE ROWNUM < 4 
+		]]>	 
+  	</select>
+
+	<select id="referRoomList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+						      ,IIRRI.SEQ_ID
+						      ,IIRRI.TITLE
+						      ,(SELECT COUNT(*)
+						          FROM ITSM_COM_ATTACH_INFO
+						         WHERE REF_TABLE_SEQ_ID = IIRRI.SEQ_ID) AS FILE_IMG
+						      ,(SELECT NAME
+		                          FROM ITSM_COM_USER_INFO
+		                         WHERE LOGIN_ID = IIRRI.CREATED_BY) AS USER_NAME
+		                      ,IIRRI.CREATED_BY   
+		                      ,TO_CHAR(IIRRI.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE 
+		                      ,CASE
+				                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+				                  'N'
+				                 ELSE
+				                  'Y'
+				               END  AS NEW_IMG
+						  FROM ITSM_IS_RESOURCE_ROOM_INFO IIRRI
+						 WHERE 1=1
+						 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+				           AND TITLE LIKE '%' || #{p_title} || '%'
+				         </if>
+				         ORDER BY IIRRI.CREATE_DATE DESC
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<insert id="referRoomInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_IS_RESOURCE_ROOM_INFO(
+		  	   SEQ_ID
+		  	 , ICUI_SEQ_ID  
+	  		 , TITLE 
+		     , CONTENTS
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_icui_seq_id} 
+			 , #{p_title}
+		     , #{p_contents}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="referRoomUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_IS_RESOURCE_ROOM_INFO
+		   SET TITLE            = #{p_title}
+		      ,CONTENTS         = #{p_contents}
+		      ,LAST_UPDATE_DATE = SYSDATE
+		      ,LAST_UPDATE_BY   = #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<insert id="referRoomAttachInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_ATTACH_INFO (
+		  	   SEQ_ID
+		  	 , REF_TABLE_SEQ_ID  
+	  		 , FILE_PATH 
+		     , FILE_NAME
+		     , FILE_SIZE
+		     , FILE_TYPE
+		     , ORG_FILE_NAME
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{ref_table_seq_id} 
+			 , #{file_path}
+			 , #{file_name}
+			 , #{file_size}
+			 , #{file_type}
+		     , #{org_file_name}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+
+	<select id="getReferRoom" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT A.SEQ_ID AS SEQ
+		      ,A.ICUI_SEQ_ID
+		      ,A.TITLE
+		      ,A.CONTENTS
+		      ,A.CREATED_BY
+		  FROM ITSM_IS_RESOURCE_ROOM_INFO A
+		 WHERE A.SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+  	<select id="popUpReferRoomAttachList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT, SEQ_ID, ORG_FILE_NAME, FILE_PATH, ROUND(FILE_SIZE/1024,1) AS FILE_SIZE
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+  	<select id="selectFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT ORG_FILE_NAME, FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</select>
+  	
+  	<delete id="refAttachFileDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</delete>
+  	
+  	<select id="getAttachFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</select>
+  	
+  	<delete id="refRoomAttachDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</delete>
+  	
+  	<delete id="refRoomDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_IS_RESOURCE_ROOM_INFO
+		 WHERE SEQ_ID = #{seq_id}
+  	</delete>
+  	
+</mapper>

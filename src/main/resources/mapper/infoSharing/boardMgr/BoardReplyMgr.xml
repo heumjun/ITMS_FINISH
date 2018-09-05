@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="BoardReplyMgr">
+
+	<!-- <select id="getReplyList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT
+            SEQ_ID,
+            BOARD_ID,
+            PARENT_ID,
+            DEPTH,
+            REPLY_CONTENT,
+            REPLY_WRITER,
+            REPLY_PASSWORD
+        FROM ITSM_IS_BBS_REPLY_INFO
+        WHERE BOARD_ID = #{p_seq_id}
+        ORDER BY SEQ_ID ASC
+  	</select> -->
+	<select id="getReplyList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	 <![CDATA[
+		SELECT SEQ_ID
+		      ,BOARD_ID
+		      ,PARENT_ID
+		      ,(level-1) AS DEPTH
+		      ,LPAD(' ',(level-1) * 8, ' ') || REPLY_CONTENT AS REPLY_CONTENT
+		      ,REPLY_WRITER
+		      ,REPLY_PASSWORD
+		  FROM ITSM_IS_BBS_REPLY_INFO
+		  WHERE BOARD_ID = #{p_seq_id}
+		  START WITH PARENT_ID = '0'
+		CONNECT BY PRIOR SEQ_ID = PARENT_ID
+		]]>
+  	</select>
+  	
+  	<insert id="boardReplySave" parameterType="java.util.Map">
+	  	INSERT INTO ITSM_IS_BBS_REPLY_INFO(
+	            SEQ_ID,
+	            BOARD_ID,
+	            PARENT_ID,
+	            DEPTH,
+	            REPLY_CONTENT,
+	            REPLY_WRITER,
+	            REPLY_PASSWORD,
+	            CREATE_DATE
+	        )VALUES(
+	        	#{seq_id}
+	           ,#{board_id}
+	           ,#{parent_id}
+	           ,#{depth}
+	           ,#{reply_content}
+	           ,#{reply_writer}
+	           ,#{reply_password}
+	           ,SYSDATE
+	        )
+  	</insert>
+  	
+  	<delete id="boardReplyDelete" parameterType="java.util.HashMap">
+        DELETE FROM ITSM_IS_BBS_REPLY_INFO
+        WHERE SEQ_ID = #{reply_id}
+          AND REPLY_PASSWORD = #{reply_password}
+    </delete>
+    
+  	<delete id="boardToReplyDelete" parameterType="java.util.HashMap">
+        DELETE FROM ITSM_IS_BBS_REPLY_INFO
+        WHERE BOARD_ID = #{p_seq_id}
+    </delete>
+  	
+</mapper>

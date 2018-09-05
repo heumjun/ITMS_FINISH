@@ -1,0 +1,131 @@
+package com.web.main.logIn.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.web.common.command.CommandMap;
+import com.web.common.constants.Constants;
+import com.web.common.exceptionHandler.CommonException;
+import com.web.common.service.CommonServiceImpl;
+import com.web.common.util.CodeUtil;
+import com.web.common.util.MessageUtil;
+import com.web.common.util.SessionUtil;
+import com.web.main.logIn.dao.LoginDAO;
+
+/**
+ * 
+ * @파일명 : LoginServiceImpl.java
+ * @프로젝트 : ITMS
+ * @날짜 : 2018. 3. 27.
+ * @작성자 : Cho HeumJun
+ * @설명
+ * 
+ *     <pre>
+ *     LoginServiceImpl
+ *     </pre>
+ */
+@Service("loginService")
+public class LoginServiceImpl extends CommonServiceImpl implements LoginService
+{
+
+	@Resource(name = "loginDAO")
+	private LoginDAO loginDAO;
+
+	/**
+	 * 
+	 * @메소드명 : isUser
+	 * @날짜 : 2018. 3. 27.
+	 * @작성자 : 조흠준
+	 * @설명
+	 * 
+	 *     <pre>
+	 *     유저체크
+	 *     </pre>
+	 * 
+	 * @param commandMap
+	 * @return
+	 */
+	@Override
+	public boolean isUser(CommandMap commandMap)
+	{
+
+		if (commandMap.get("loginID") != null)
+		{
+			commandMap.put("loginID", CodeUtil.decrypt(commandMap.get("loginID") + ""));
+			SessionUtil.setObject("loginID", commandMap.get("loginID"));
+		}
+
+		// 비밀번호 암호화
+		commandMap.put("login_pw", CodeUtil.encrypt((String) commandMap.get("login_pw")));
+		// 로그인 유저를 DB로부터 취득
+		Object loginUser = loginDAO.selectLogin(commandMap.getMap());
+		if (loginUser != null)
+		{
+			// 유저정보가 있는경우 유저정보를 세션에 설정
+			SessionUtil.setLoginUserObject(loginUser);
+			return true;
+		}
+		// 유저정보가 없는경우
+		return false;
+	}
+
+	@Override
+	public List<Map<String, Object>> popupList(CommandMap commandMap)
+	{
+		return loginDAO.popupList(commandMap.getMap());
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+	public Map<String, String> userInfoSave(CommandMap commandMap) throws Exception
+	{
+		// 결과값 최초
+		String result = Constants.RESULT_FAIL;
+
+		// 개인정보 수정
+		commandMap.put("p_password", CodeUtil.encrypt((String) commandMap.get("p_password")));
+		commandMap.put("p_new_password", CodeUtil.encrypt((String) commandMap.get("p_new_password")));
+		int saveResult = loginDAO.userInfoSave(commandMap.getMap());
+
+		if (saveResult == 0)
+		{
+			result = Constants.RESULT_FAIL;
+		}
+		else
+		{
+			result = Constants.RESULT_SUCCESS;
+		}
+
+		if (result.equals(Constants.RESULT_SUCCESS))
+		{
+			// 결과값에 따른 메시지를 담아 전송
+			//return MessageUtil.getResultMessage(result);
+			Map<String, String> map = new HashMap<String, String>();
+			map.put(Constants.RESULT_KEY, Constants.RESULT_SUCCESS);
+			map.put(Constants.RESULT_MASAGE_KEY, MessageUtil.getMessage("common.password.succ"));
+			return map;
+		}
+		else if (result.equals(Constants.RESULT_FAIL))
+		{
+			// 실패한경우(실패 메시지가 없는 경우)
+			//throw new CommonException();
+			Map<String, String> map = new HashMap<String, String>();
+			map.put(Constants.RESULT_KEY, Constants.RESULT_FAIL);
+			map.put(Constants.RESULT_MASAGE_KEY, MessageUtil.getMessage("common.password.fail"));
+			return map;
+		}
+		else
+		{
+			// 실패한경우(실패 메시지가 있는 경우)
+			throw new CommonException(result);
+		}
+	}
+
+}

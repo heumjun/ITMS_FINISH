@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SchedulerMgr">
+
+	<resultMap id="ReportResult" type="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	    <result property="contents" column="CONTENTS" jdbcType="CLOB" javaType="java.lang.String" />
+	</resultMap>
+
+  	<select id="warehousingErrorCnt" parameterType="java.util.Map" resultType="int" >
+		SELECT COUNT(*)	AS CNT
+     	FROM PO_INTERFACE_ERRORS PIE,
+          	 RCV_TRANSACTIONS_INTERFACE RT,
+          	 RCV_HEADERS_INTERFACE RHI
+    	WHERE PIE.INTERFACE_TYPE = 'RCV-856'
+      	AND PIE.INTERFACE_LINE_ID = RT.INTERFACE_TRANSACTION_ID
+      	AND RT.HEADER_INTERFACE_ID = RHI.HEADER_INTERFACE_ID
+  	</select>
+  	
+  	<select id="materialsMoveErrorCnt" parameterType="java.util.Map" resultType="int" >
+		SELECT COUNT(*)	AS CNT
+		FROM MTL_TRANSACTIONS_INTERFACE
+  		WHERE ERROR_EXPLANATION IS NOT NULL
+  	</select>
+  	
+  	<select id="weeklyPerformanceList" parameterType="java.util.Map" resultMap="ReportResult" >
+		SELECT 
+		    IDWRM.YEAR,
+		    IDWRM.MONTH,
+		    IDWRM.CHASU,
+		    IDWRM.CONTENTS,
+		    ICUI.NAME,
+		    ICUI.ERP_LEGACY_GUBUN,
+		    ICUI.BUSINESS_ROLE
+	    FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM,
+	         ITSM_COM_USER_INFO ICUI 
+	    WHERE IDWRM.YEAR = TO_CHAR(SYSDATE, 'YYYY') 
+	    AND IDWRM.MONTH = TO_NUMBER(TO_CHAR(SYSDATE, 'MM')) 
+	    AND IDWRM.CHASU = CEIL((SYSDATE - TRUNC(TRUNC(SYSDATE, 'MM'), 'IW') + 1) / 7)
+	    AND IDWRM.CREATED_BY = ICUI.LOGIN_ID
+	    ORDER BY ICUI.ERP_LEGACY_GUBUN ASC, IDWRM.SEQ_ID ASC 
+  	</select>
+  	
+  	<select id="vacationNoticeList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT IDGRI.SEQ_ID
+              ,IDGRI.ICUI_SEQ_ID
+              ,ICUI.LOGIN_ID 
+              ,ICUI.NAME AS USER_NAME
+              ,TO_CHAR(IDGRI.REQ_DATE, 'YYYY-MM-DD') AS REQ_DATE
+              ,IDGRI.VAC_TYPE
+              ,(SELECT MEDIUM_CODE_KOR_NAME
+                FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+                WHERE ICCID.MEDIUM_TYPE = IDGRI.VAC_TYPE) AS VAC_TYPE_NAME
+              ,TO_CHAR(IDGRI.VAC_START_DATE, 'YYYY-MM-DD') AS VAC_START_DATE
+              ,TO_CHAR(IDGRI.VAC_END_DATE, 'YYYY-MM-DD') AS VAC_END_DATE
+              ,IDGRI.VAC_REQ_DAY
+              ,IDGRI.VAC_REQ_REASON
+              ,IDGRI.STATUS
+              ,(SELECT MEDIUM_CODE_KOR_NAME
+                FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+                WHERE ICCID.MEDIUM_TYPE = IDGRI.STATUS) AS STATUS_NAME
+              ,IDGRI.VAC_APPROVER
+              ,TO_CHAR(IDGRI.VAC_APPROVE_DATE, 'YYYY-MM-DD') AS VAC_APPROVE_DATE
+           FROM ITSM_DLM_GTM_REQ_INFO IDGRI,
+           	    ITSM_COM_USER_INFO ICUI
+           WHERE IDGRI.ICUI_SEQ_ID = ICUI.SEQ_ID
+           --차주 데이터 
+           AND TO_CHAR(IDGRI.VAC_START_DATE, 'YYYY-MM-DD') <![CDATA[ >= ]]> TO_CHAR(NEXT_DAY(SYSDATE,'월요일'), 'YYYY-MM-DD')
+           AND TO_CHAR(IDGRI.VAC_START_DATE, 'YYYY-MM-DD') <![CDATA[ <= ]]> TO_CHAR(NEXT_DAY(SYSDATE+5,'금요일'), 'YYYY-MM-DD')
+           --승인 데이터
+           AND IDGRI.STATUS = 'S'
+          ORDER BY TO_NUMBER(ICUI.ORDER_NUM) , IDGRI.VAC_START_DATE
+  	</select>
+	
+</mapper>

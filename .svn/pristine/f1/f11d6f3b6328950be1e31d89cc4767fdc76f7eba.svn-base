@@ -1,0 +1,87 @@
+#################################################################
+# \uac1c\ubc1cDB														#
+#################################################################
+# Legacy \uc138\uc158
+#itms.jdbc.url=jdbc:oracle:thin:@10.231.178.11:1581:HRSGCOND
+#itms.jdbc.username=dsmisp
+#itms.jdbc.password=dsmisp1357!
+
+# ERP \uc138\uc158
+#itms.jdbc.url=jdbc:oracle:thin:@10.231.178.11:1561:HRSGERPD
+#itms.jdbc.username=apps
+#itms.jdbc.password=apps
+
+#################################################################
+# \uc6b4\uc601DB														#
+#################################################################
+# Legacy \uc138\uc158
+itms.jdbc.url=jdbc:oracle:thin:@10.231.177.33:1581:HRSGCON
+itms.jdbc.username=dsmisp
+itms.jdbc.password=dsmisp1357!
+
+# ERP \uc138\uc158
+erp.jdbc.url=jdbc:oracle:thin:@10.231.177.31:1601:HRSGERP
+erp.jdbc.username=apps
+erp.jdbc.password=apps
+
+#################################################################
+# \uacb0\uc7ac \uc2b9\uc778 \uad00\ub9ac\uc790												#
+#################################################################
+approval.admin=boseongkong
+approval.phone=01081644326
+
+#################################################################
+# \uba54\uc77c\uc11c\ubc84														#
+#################################################################
+mail.smtp.host=smtp.naver.com
+mail.smtp.port=465
+mail.admin.username=jjs6582
+mail.admin.password=whgmawns54
+mail.admin.address=jjs6582@naver.com
+mail.smtp.debug=false
+mail.test.address=heumjoon.cho@doosan.com
+
+#################################################################
+# \ucca8\ubd80\ud30c\uc77c \uc800\uc7a5 \uc704\uce58											#
+#################################################################
+# \uac8c\uc2dc\ud310 \uc790\ub8cc
+bbsFile.path=C:\\itms\\file_upload\\bbs\\
+# \uc790\ub8cc\uc2e4\uc790\ub8cc
+referfile.path=C:\\itms\\file_upload\\refer\\
+# \ubc30\ud3ec\uc790\ub8cc
+distbFile.path=C:\\itms\\file_upload\\distb\\
+
+#################################################################
+# \ubc30\uce58\ud504\ub85c\uadf8\ub7a8 \uc124\uc815                         					#
+#################################################################
+#SMS/\uba54\uc77c \uc804\uc1a1\uc5ec\ubd80 \uc2a4\uc704\uce58
+common.smsSendSwitch=N
+common.mailSendSwitch=N
+
+#\uba54\uc77c \uacf5\ud1b5\uc124\uc815
+common.sendMailAddr=heumjoon.cho@doosan.com
+common.receverUserId=admin
+
+#################################################################
+# \uac1c\ubc1c \uba54\uc77c														#
+#################################################################
+# \uc785\uace0\uc624\ub958\uc124\uc815
+warehousingError.receiverId=admin
+# \uc790\uc7ac\uc774\ub3d9\uc624\ub958\uc124\uc815
+materialsMoveError.receiverId=admin
+# \uc8fc\uac04\uc2e4\uc801\uc124\uc815
+weeklyPerformance.receiverId=admin
+# \ucc28\uc8fc\ud734\uac00\uc77c\uc815\uc124\uc815
+nextWeekVacation.receiverId=admin
+
+#################################################################
+# \uc6b4\uc601 \uba54\uc77c														#
+#################################################################
+# \uc785\uace0\uc624\ub958\uc124\uc815
+#warehousingError.receiverId=miyeongkim
+# \uc790\uc7ac\uc774\ub3d9\uc624\ub958\uc124\uc815
+#materialsMoveError.receiverId=miyeongkim
+# \uc8fc\uac04\uc2e4\uc801\uc124\uc815
+#weeklyPerformance.receiverId=boseongkong
+# \ucc28\uc8fc\ud734\uac00\uc77c\uc815\uc124\uc815
+#nextWeekVacation.receiverId=boseongkong

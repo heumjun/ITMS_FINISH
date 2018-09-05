@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="smsNoticeMgrList">
+	<select id="list" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM (  SELECT  DECODE(ICSNI.SMS_TYPE,'A','주간실적','B','근태신청','C','SMS 전송 서비스', '비밀번호 초기화') AS SMS_TYPE_NAME  
+						         ,ICUI.NAME AS RECEIVER_NAME
+						         ,ICSNI.CONTENTS
+						         ,TO_CHAR(ICSNI.CREATE_DATE, 'YYYY-MM-DD HH24:MI:SS') SEND_DATE
+						    FROM ITSM_COM_SMS_NOTICE_INFO ICSNI, 
+						         ITSM_COM_USER_INFO ICUI
+						   WHERE 1=1 
+						     AND ICSNI.ICUI_SEQ_ID = ICUI.SEQ_ID(+)      
+						   
+							 <if test='p_sms_type != null and !p_sms_type.equalsIgnoreCase("")'>
+							 	AND ICSNI.SMS_TYPE = #{p_sms_type}
+							 </if>
+
+							 <if test='p_name != null and !p_name.equalsIgnoreCase("")'>
+							 	AND ICUI.NAME LIKE '%' || #{p_name} || '%'
+							 </if>
+							 
+						     ORDER BY ICSNI.CREATE_DATE DESC, TO_NUMBER(ICUI.ORDER_NUM), ICSNI.SMS_TYPE	          
+		) T1 ) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<select id="selectTotalRecord" parameterType="java.util.Map" resultType="String">
+	  SELECT COUNT(*) AS CNT
+	    FROM ITSM_COM_SMS_NOTICE_INFO ICSNI, 
+	         ITSM_COM_USER_INFO ICUI
+	   WHERE 1=1 
+	     AND ICSNI.ICUI_SEQ_ID = ICUI.SEQ_ID(+)      
+	   
+		 <if test='p_sms_type != null and !p_sms_type.equalsIgnoreCase("")'>
+		 	AND ICSNI.SMS_TYPE = #{p_sms_type}
+		 </if>
+
+		 <if test='p_name != null and !p_name.equalsIgnoreCase("")'>
+			AND ICUI.NAME LIKE '%' || #{p_name} || '%'
+		 </if>
+  	</select>
+  	
+</mapper>

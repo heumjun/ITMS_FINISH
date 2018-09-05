@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="LogMgr">
+
+	<select id="loginLogList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (
+						SELECT COUNT(*) OVER() AS CNT
+		          			  ,LOGIN_LOG_ID
+		                      ,LOGIN_SEQ_ID
+		                      ,LOGIN_ID
+		                      ,LOGIN_IP
+		                      ,TO_CHAR(LOGIN_DATE, 'YYYY-MM-DD HH24:MI') AS LOGIN_DATE
+		                  FROM ITSM_COM_LOGIN_LOG
+		                  ORDER BY LOGIN_DATE DESC
+		          ) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<select id="errorLogList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (
+						SELECT COUNT(*) OVER() AS CNT 
+		          			  ,ERROR_LOG_ID
+		                      ,EXECUTE_URL
+		                      ,LOGIN_ID
+		                      ,TO_CHAR(ERROR_DATE, 'YYYY-MM-DD HH24:MI') AS ERROR_DATE
+		                      ,ERROR_MSG
+		                  FROM ITSM_COM_ERROR_LOG
+		                  ORDER BY ERROR_DATE DESC
+					) T1 
+			) T2
+		 WHERE PAGE = #{curPageNo}       
+  	</select>
+  	
+</mapper>

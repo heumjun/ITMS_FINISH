@@ -1,0 +1,42 @@
+package com.web.lec.wqmsIfMgr.controller;
+
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.View;
+
+import com.web.common.command.CommandMap;
+import com.web.common.controller.CommonController;
+import com.web.lec.wqmsIfMgr.service.WqmsIfMgrService;
+
+@Controller
+public class WqmsIfMgrController extends CommonController
+{
+
+	@Resource(name = "lec.wqmsIfMgr.wqmsIfMgrService")
+	private WqmsIfMgrService wqmsIfMgrService;
+	
+	@RequestMapping(value = "lec.wqmsIfMgr.wqmsIfMgr.do")
+	public ModelAndView wqmsIfMgr(CommandMap commandMap)
+	{
+		return getUserRoleAndLink(commandMap);
+	}
+	
+	@RequestMapping(value = "lec.wqmsIfMgr.wqmsIfMgrList.do")
+	public @ResponseBody Map<String, Object> wqmsIfMgrList(CommandMap commandMap) throws Exception
+	{
+		return wqmsIfMgrService.wqmsIfMgrList(commandMap);
+	}
+	
+	@RequestMapping(value = "lec.wqmsIfMgr.wqmsIfMgrExcelExport.do")
+	public View manageUserListExcelExport(CommandMap commandMap, Map<String, Object> modelMap) throws Exception
+	{
+		return wqmsIfMgrService.wqmsIfMgrExcelExport(commandMap, modelMap);
+	}
+	
+}

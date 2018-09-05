@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="LoginUser">
+
+	<select id="selectLogin" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT ICUI.SEQ_ID
+			  ,ICUI.LOGIN_ID
+		      ,ICUI.PASSWORD
+		      ,ICUI.NAME
+		      ,ICUI.E_MAIL
+		      ,ICUI.COMPANY_NAME
+		      ,ICUI.DEPARTMENT
+		      ,ICUI.RANK AS RANK_CODE
+          	  ,NVL2(RANK, 
+          	  		   (SELECT ICCID.MEDIUM_CODE_KOR_NAME
+		                  FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+		                 WHERE ICCID.MEDIUM_CODE = ICUI.RANK
+		                   AND ROWNUM = 1)
+		               ,'') AS RANK
+		      ,ICUI.BUSINESS_ROLE
+		      ,ICUI.PHONE1
+		      ,ICUI.PHONE2
+		      ,ICUI.TEL
+		      ,ICUI.HOME_ADDRESS
+		      ,ICUI.QUESTION AS QUESTION_CODE
+	          ,NVL2(ICUI.QUESTION
+	               ,(SELECT ICCID.MEDIUM_CODE_KOR_NAME
+	                  FROM ITSM_COM_CODE_INFO_DETAIL ICCID
+	                 WHERE ICCID.MEDIUM_CODE = ICUI.QUESTION
+	                   AND ROWNUM = 1)
+	               ,'') AS QUESTION
+          	  ,ICUI.ANSWER
+		      ,ICUI.STATUS
+		      ,(SELECT ICSAIM.STAND_AUTH_CODE
+		          FROM ITSM_COM_STAND_AUTH_INFO_M ICSAIM
+		         WHERE ICIAI.ICSAIM_SEQ_ID = ICSAIM.SEQ_ID) AS AUTH_CODE
+		      ,(SELECT ICSAIM.STAND_AUTH_CODE_NAME
+		          FROM ITSM_COM_STAND_AUTH_INFO_M ICSAIM
+		         WHERE ICIAI.ICSAIM_SEQ_ID = ICSAIM.SEQ_ID) AS AUTH_CODE_NAME
+		  FROM ITSM_COM_USER_INFO ICUI, ITSM_COM_INDI_AUTH_INFO ICIAI
+		 WHERE 1 = 1
+		   AND ICUI.SEQ_ID = ICIAI.ICUI_SEQ_ID(+)
+		   AND ICUI.LOGIN_ID = <if test='loginID != null'>#{loginID}</if>
+						  <if test='login_id != null and login_id != ""'>#{login_id}</if>
+						  <if test='loginID == null and login_id == null'>#{loginId}</if>
+		   AND ICUI.PASSWORD = #{login_pw}			  
+		   AND ICUI.STATUS = 'Y'		  
+  	</select>
+  	
+  	<select id="popupList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap">
+		SELECT IINI.SEQ_ID AS SEQ
+		  FROM ITSM_IS_NOTICE_INFO IINI
+		 WHERE IINI.NOTI_FLAG = 'Y'
+		   AND SYSDATE BETWEEN NOTI_START_DATE AND NOTI_END_DATE
+	</select>
+	
+	<update id="userInfoSave" parameterType="java.util.Map">
+		MERGE INTO ITSM_COM_USER_INFO C
+		USING (SELECT SEQ_ID
+		         FROM ITSM_COM_USER_INFO
+		        WHERE SEQ_ID = #{seq_id}
+		          AND PASSWORD = #{p_password}) S
+		ON (C.SEQ_ID = S.SEQ_ID)
+		WHEN MATCHED THEN
+		  UPDATE
+		     SET C.NAME          = #{p_name}
+		        ,C.E_MAIL        = #{p_e_mail}
+		        ,C.COMPANY_NAME  = #{p_company_name}
+		        ,C.DEPARTMENT    = #{p_department}
+		        ,C.RANK          = #{p_sel_rank}
+		        ,C.BUSINESS_ROLE = #{p_business_role}
+		        ,C.PHONE1        = #{p_phone1}
+		        ,C.TEL           = #{p_tel}
+		        ,C.HOME_ADDRESS  = #{p_home_address}
+		        ,C.QUESTION      = #{p_sel_question}
+		        ,C.ANSWER        = #{p_answer}
+		        ,C.PASSWORD      = #{p_new_password}
+	</update>
+	
+	<insert id="saveUserLoginLog" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_LOGIN_LOG X
+		       (
+		               X.LOGIN_LOG_ID
+		             , X.LOGIN_SEQ_ID
+		             , X.LOGIN_ID
+		             , X.LOGIN_DATE
+		             , X.LOGIN_IP
+		       )
+		       VALUES
+		       (
+		               ITSM_COM_LOGIN_LOG_ID.NEXTVAL
+		             , #{login_seq_id}
+		             , #{login_id}
+		             , SYSDATE
+		             , #{login_ip}
+		       )
+	</insert>
+	
+
+</mapper>

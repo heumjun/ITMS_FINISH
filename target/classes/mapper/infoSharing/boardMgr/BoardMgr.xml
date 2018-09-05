@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="BoardMgr">
+
+	<select id="getMainBoardList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap">
+		<![CDATA[
+			SELECT COUNT(*) OVER() AS CNT
+			      ,SEQ_ID
+			      ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE SEQ_ID = ICUI_SEQ_ID) AS USER_NAME
+			      ,TITLE
+			      ,HIT_COUNT
+			      ,LAST_UPDATE_BY
+			      ,TO_CHAR(LAST_UPDATE_DATE, 'YYYY-MM-DD AM HH24:MI') AS LAST_UPDATE_DATE
+			      ,CASE
+	                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+	                  'N'
+	                 ELSE
+	                  'Y'
+	               END  AS NEW_IMG
+			  FROM ITSM_IS_BBS_INFO IIBI
+			 WHERE 1 = 1
+			   AND ROWNUM < 4
+			 ORDER BY LAST_UPDATE_DATE DESC
+		]]>	 
+	</select>
+
+	<select id="boardList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap">
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+		                      ,SEQ_ID
+		                      ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE SEQ_ID = ICUI_SEQ_ID) AS USER_NAME
+		                      ,TITLE
+		                      ,HIT_COUNT
+		                      ,(SELECT COUNT(*) FROM ITSM_IS_BBS_REPLY_INFO A WHERE A.BOARD_ID = IIBI.SEQ_ID) AS REPLY_COUNT
+		                      ,LAST_UPDATE_BY
+		                      ,TO_CHAR(LAST_UPDATE_DATE, 'YYYY-MM-DD') AS LAST_UPDATE_DATE
+		                      ,CASE
+				                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+				                  'N'
+				                 ELSE
+				                  'Y'
+				               END  AS NEW_IMG
+		                  FROM ITSM_IS_BBS_INFO IIBI
+		                  WHERE 1=1
+						 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+				           AND TITLE LIKE '%' || #{p_title} || '%'
+				         </if>
+				         ORDER BY LAST_UPDATE_DATE DESC
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<update id="boardMgrSave" parameterType="java.util.HashMap">
+  		MERGE INTO ITSM_IS_BBS_INFO C
+			USING DUAL
+			ON (SEQ_ID = #{seq_id})
+			WHEN MATCHED THEN
+			  UPDATE SET C.TITLE            = #{p_title}
+				        ,C.CONTENTS         = #{p_content,	jdbcType=CLOB}
+				        ,C.LAST_UPDATE_DATE = SYSDATE
+				        ,C.LAST_UPDATE_BY   = #{loginId}
+			WHEN NOT MATCHED THEN
+			  INSERT
+			    (SEQ_ID
+			    ,ICUI_SEQ_ID
+			    ,TITLE
+			    ,CONTENTS
+			    ,HIT_COUNT
+			    ,CREATE_DATE
+			    ,CREATED_BY
+			    ,LAST_UPDATE_DATE
+			    ,LAST_UPDATE_BY)
+			  VALUES
+			    (#{seq_id}
+			    ,#{p_icui_seq_id}
+			    ,#{p_title}
+			    ,#{p_content,	jdbcType=CLOB}
+			    ,'0'
+			    ,SYSDATE
+			    ,#{loginId}
+			    ,SYSDATE
+			    ,#{loginId}
+			    )
+    </update>
+    
+    <insert id="boardMgrInsert" parameterType="java.util.Map">
+    	INSERT
+		  INTO ITSM_IS_BBS_INFO(
+    			 SEQ_ID
+			    ,ICUI_SEQ_ID
+			    ,TITLE
+			    ,CONTENTS
+			    ,HIT_COUNT
+			    ,CREATE_DATE
+			    ,CREATED_BY
+			    ,LAST_UPDATE_DATE
+			    ,LAST_UPDATE_BY)
+			  VALUES
+			    (#{seq_id}
+			    ,#{p_icui_seq_id}
+			    ,#{p_title}
+			    ,#{p_content}
+			    ,'0'
+			    ,SYSDATE
+			    ,#{loginId}
+			    ,SYSDATE
+			    ,#{loginId}
+			    )
+    </insert>
+    
+    <update id="boardMgrUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_IS_BBS_INFO
+		   SET TITLE            = #{p_title}
+		      ,CONTENTS         = #{p_content}
+		      ,LAST_UPDATE_DATE = SYSDATE
+		      ,LAST_UPDATE_BY   = #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}      
+    </update>
+    
+    <resultMap id="boardMgrMaps"  type="java.util.HashMap" >
+        <result column="SEQ_ID"	 		property="SEQ_ID"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="USER_NAME"		property="USER_NAME"	javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="TITLE"	 		property="TITLE"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="CONTENTS" 		property="CONTENTS" 	javaType="java.lang.String" jdbcType="CLOB" />
+        <result column="LAST_UPDATE_DATE"	property="LAST_UPDATE_DATE"	javaType="java.lang.String" jdbcType="VARCHAR" />
+	</resultMap>
+	
+    <select id="getBoardView" parameterType="java.util.Map" resultMap="boardMgrMaps">
+    	SELECT SEQ_ID
+    	      ,ICUI_SEQ_ID
+    		  ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE SEQ_ID = ICUI_SEQ_ID) AS USER_NAME
+		      ,TITLE
+		      ,CONTENTS
+		      ,TO_CHAR(LAST_UPDATE_DATE, 'YYYY-MM-DD AM HH:MI') AS LAST_UPDATE_DATE
+		  FROM ITSM_IS_BBS_INFO
+		 WHERE SEQ_ID = #{p_seq_id}
+    </select>
+    
+    <update id="updateBoardHitCount" parameterType="java.util.Map">
+    	UPDATE ITSM_IS_BBS_INFO
+		   SET HIT_COUNT            = HIT_COUNT + 1
+		 WHERE SEQ_ID = #{p_seq_id} 
+    </update>
+    
+    <delete id="boardDelete" parameterType="java.util.Map">
+    	DELETE FROM ITSM_IS_BBS_INFO
+        WHERE SEQ_ID = #{p_seq_id}
+    </delete>
+  	
+</mapper>

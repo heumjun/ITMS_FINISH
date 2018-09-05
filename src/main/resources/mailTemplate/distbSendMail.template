@@ -1,0 +1,86 @@
+<font size=2><p><b> 안녕하세요. </b></p></font>
+<font size=2><p><b> 업무에 노고가 많으십니다. </b></p></font>
+#if ($conStatus == "R")
+<font size=2><p><b>본 메일은 배포 신청 시 ITMS시스템에서 발송되는 통보 메일입니다.</b></p></font>
+<font size=2><p><b>ITMS시스템에 접속하여 아래사항 관련하여 승인처리 부탁 드립니다.  </b></p></font>
+<font size=2><p>&nbsp;---------------------------------------------- 아래 ------------------------------------------------</p></font>
+
+<table cellpadding='2' cellspacing='0' border='1' style='width:700; font-size:9pt'>
+	<tr>
+		<th style='width:120;'>제&nbsp;&nbsp;&nbsp;목</th>
+		<td style='width:580;'>$title</td>
+	</tr>	
+	<tr>
+		<th style='width:120;'>신 청 자</th>
+		<td style='width:580;'>$user_name</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>신청일시</th>
+		<td style='width:580;'>$create_date</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>내&nbsp;&nbsp;&nbsp;용</th>
+		<td style='width:580;'>$contents</td>
+	</tr>	
+</table>
+
+#elseif ($conStatus == "N")
+<font size=2><p><b>본 메일은 배포 요청 시 ITMS시스템에서 발송되는 통보 메일입니다.</b></p></font>
+<font size=2><p><b>아래사항 관련하여 처리 후 ITMS시스템에 접속하여  처리결과를 등록 부탁 드립니다.  </b></p></font>
+<font size=2><p>&nbsp;---------------------------------------------- 아래 ------------------------------------------------</p></font>
+
+<table cellpadding='2' cellspacing='0' border='1' style='width:700; font-size:9pt'>
+	<tr>
+		<th style='width:120;'>제&nbsp;&nbsp;&nbsp;목</th>
+		<td style='width:580;'>$title</td>
+	</tr>	
+	<tr>
+		<th style='width:120;'>신 청 자</th>
+		<td style='width:580;'>$user_name</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>신청일시</th>
+		<td style='width:580;'>$create_date</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>내&nbsp;&nbsp;&nbsp;용</th>
+		<td style='width:580;'>$contents</td>
+	</tr>	
+</table>
+
+#elseif ($conStatus == "S")
+<font size=2><p><b>아래와 같이 배포요청에 따른 처리 결과를 통보드립니다.  </b></p></font>
+<font size=2><p><b>자세한 사항은  ITMS시스템에 접속하여 확인하시기 바랍니다.  </b></p></font>
+<font size=2><p>&nbsp;---------------------------------------------- 아래 ------------------------------------------------</p></font>
+
+<table cellpadding='2' cellspacing='0' border='1' style='width:700; font-size:9pt'>
+	<tr>
+		<th style='width:120;'>제&nbsp;&nbsp;&nbsp;목</th>
+		<td style='width:580;'>$title</td>
+	</tr>	
+	<tr>
+		<th style='width:120;'>신 청 자</th>
+		<td style='width:580;'>$user_name</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>신청일시</th>
+		<td style='width:580;'>$create_date</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>내&nbsp;&nbsp;&nbsp;용</th>
+		<td style='width:580;'>$contents</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>배포 담당자</th>
+		<td style='width:580;'>$charge_name</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>처리결과</th>
+		<td style='width:580;'>#if ($status == "S") 처리완료 #elseif($status == "X") 처리불가 #end</td>
+	</tr>	
+	<tr>	
+		<th style='width:120;'>Comments</th>
+		<td style='width:580;'>$comments</td>
+	</tr>
+</table>
+#end

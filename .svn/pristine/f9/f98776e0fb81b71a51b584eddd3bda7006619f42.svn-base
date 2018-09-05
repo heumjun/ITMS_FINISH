@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab4">
+
+	<!-- 4.tab : Interface2 --> 
+	<!-- RCV Transaction -->
+	<select id="wipChkMgrList8" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT PI.INTERFACE_TYPE
+			      ,PI.INTERFACE_TRANSACTION_ID
+			      ,PI.INTERFACE_HEADER_ID
+			      ,PI.INTERFACE_LINE_ID
+			      ,PI.COLUMN_NAME
+			      ,PI.TABLE_NAME
+			      ,PI.ERROR_MESSAGE
+			      ,PI.ERROR_MESSAGE_NAME
+			      ,PI.PROCESSING_DATE
+			      ,PI.REQUEST_ID
+			      ,PI.BATCH_ID
+			      ,'------' AS RH
+			      ,RH.HEADER_INTERFACE_ID
+			      ,RH.GROUP_ID
+			      ,RH.PROCESSING_STATUS_CODE
+			      ,RH.RECEIPT_HEADER_ID
+			      ,RH.VENDOR_ID
+			      ,RH.VENDOR_SITE_ID
+			      ,'------' AS RT
+			      ,RT.INTERFACE_TRANSACTION_ID AS RT_INTERFACE_TRANSACTION_ID
+			      ,RT.GROUP_ID AS RT_GROUP_ID
+			      ,RT.REQUEST_ID AS RT_REQUEST_ID
+			      ,RT.TRANSACTION_TYPE AS RT_TRANSACTION_TYPE
+			      ,RT.TRANSACTION_DATE AS RT_TRANSACTION_DATE
+			      ,RT.ATTRIBUTE12 AS RT_ATTRIBUTE12
+			      ,RT.ATTRIBUTE13 AS RT_ATTRIBUTE13
+			      ,RT.ATTRIBUTE14 AS RT_ATTRIBUTE14
+			      ,RT.ATTRIBUTE15 AS RT_ATTRIBUTE15
+			      ,RT.HEADER_INTERFACE_ID AS RT_HEADER_INTERFACE_ID
+			      ,RT.DOCUMENT_NUM AS RT_DOCUMENT_NUM
+			      ,RT.DOCUMENT_LINE_NUM AS RT_DOCUMENT_LINE_NUM
+			FROM   PO_INTERFACE_ERRORS         PI
+			      ,RCV_HEADERS_INTERFACE       RH
+			      ,RCV_TRANSACTIONS_INTERFACE  RT
+			WHERE  1 = 1
+			--AND    PI.INTERFACE_TYPE      = 'RCV-856'
+			AND    PI.INTERFACE_LINE_ID   = RT.INTERFACE_TRANSACTION_ID
+			AND    RT.HEADER_INTERFACE_ID = RH.HEADER_INTERFACE_ID
+		]]> 
+  	</select>
+  	
+  	<!-- Requisition -->
+	<select id="wipChkMgrList9" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT PRI.CREATION_DATE
+			      ,PRI.TRANSACTION_ID
+			      ,PRI.PROCESS_FLAG
+			      ,PRI.REQUEST_ID
+			      ,PRI.BATCH_ID
+			      ,PIE.COLUMN_NAME
+			      ,PIE.ERROR_MESSAGE
+			      ,PRI.INTERFACE_SOURCE_CODE
+			      ,PRI.REQ_NUMBER_SEGMENT1
+			      ,PRI.HEADER_ATTRIBUTE1
+			      ,PRI.DESTINATION_ORGANIZATION_ID
+			      ,PRI.PREPARER_ID
+			      ,(SELECT PAP.LAST_NAME
+			        FROM   PER_ALL_PEOPLE_F PAP
+			        WHERE  PAP.PERSON_ID = PRI.PREPARER_ID)  MANAGER_NAME
+			      ,PRI.CREATED_BY
+			      ,(SELECT FU.DESCRIPTION
+			        FROM   FND_USER FU
+			        WHERE  FU.USER_ID = PRI.CREATED_BY
+			        AND    ROWNUM     = 1)                   CREATED_NAME
+			      ,PRI.SUGGESTED_BUYER_ID
+			      ,(SELECT PAP.LAST_NAME
+			        FROM   PER_ALL_PEOPLE_F PAP
+			        WHERE  PAP.PERSON_ID = PRI.SUGGESTED_BUYER_ID) BUYER_NAME
+			      ,PRI.PROJECT_ID
+			      ,PPA.SEGMENT1   PROJECT_NUM
+			      ,PPS.PROJECT_STATUS_NAME
+			      ,PPA.START_DATE
+			      ,PPA.COMPLETION_DATE
+			      ,PRI.TASK_ID
+			      ,PT.TASK_NUMBER TASK_NUM
+			      ,PT.START_DATE
+			      ,PT.COMPLETION_DATE
+			      ,PRI.EXPENDITURE_TYPE
+			      ,PRI.EXPENDITURE_ORGANIZATION_ID     EXPENDITURE_ORG_ID
+			      ,PRI.EXPENDITURE_ITEM_DATE
+			      ,PRI.QUANTITY
+			      ,PRI.HEADER_DESCRIPTION
+			FROM   PO_REQUISITIONS_INTERFACE_ALL  PRI
+			      ,PO_INTERFACE_ERRORS            PIE
+			      ,PA_PROJECTS_ALL                PPA
+			      ,PA_PROJECT_STATUSES            PPS
+			      ,PA_TASKS                       PT
+			WHERE  1 = 1
+			AND    PIE.INTERFACE_TYPE(+)     = 'REQIMPORT'
+			AND    PRI.INTERFACE_SOURCE_CODE IN ('MFG_EST','MRP')
+			AND    PRI.TRANSACTION_ID        = PIE.INTERFACE_TRANSACTION_ID(+)
+			AND    PRI.PROJECT_ID            = PPA.PROJECT_ID(+)
+			AND    PPA.PROJECT_STATUS_CODE   = PPS.PROJECT_STATUS_CODE(+)
+			AND    PRI.TASK_ID               = PT.TASK_ID(+)
+			AND    PRI.CREATION_DATE        >= TRUNC(SYSDATE,'MONTH')
+		]]> 
+  	</select>
+  	
+  	<!-- MSI Transaction -->
+	<select id="wipChkMgrList10" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT MSI.SET_PROCESS_ID
+			      ,MSI.TRANSACTION_ID
+			      ,MSI.PROCESS_FLAG
+			      ,MSI.ORGANIZATION_ID
+			      ,MSI.CREATION_DATE
+			      ,MSI.CREATED_BY
+			      ,(SELECT FU.DESCRIPTION
+			        FROM   FND_USER FU
+			        WHERE  FU.USER_ID = MSI.CREATED_BY
+			        AND    ROWNUM     = 1)  CREATED_NAME
+			      ,MSI.SEGMENT1
+			      ,MSI.DESCRIPTION
+			      ,MSI.PRIMARY_UOM_CODE
+			      ,MSI.ATTRIBUTE1
+			      ,MSI.ATTRIBUTE7
+			      ,MSI.ATTRIBUTE14
+			      ,MSI.INVENTORY_ITEM_STATUS_CODE
+			      ,MSI.ITEM_TYPE
+			      ,MSI.TEMPLATE_NAME
+			      ,MSI.TRANSACTION_TYPE
+			      ,'------' AS MIE
+			      ,MIE.TABLE_NAME
+			      ,MIE.MESSAGE_NAME
+			      ,MIE.COLUMN_NAME
+			      ,MIE.ERROR_MESSAGE
+			      ,MIE.MESSAGE_TYPE
+			FROM   MTL_INTERFACE_ERRORS        MIE
+			,      MTL_SYSTEM_ITEMS_INTERFACE  MSI
+			WHERE  1 = 1
+			AND    MIE.TRANSACTION_ID = MSI.TRANSACTION_ID
+			--AND    MSI.PROCESS_FLAG   = 3
+			AND    MSI.CREATION_DATE >= TRUNC(SYSDATE,'MONTH')
+		]]> 
+  	</select>
+  	
+  	<!-- MTI Transaction -->
+	<select id="wipChkMgrList11" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT TRANSACTION_INTERFACE_ID
+			      ,TRANSACTION_HEADER_ID
+			      ,INVENTORY_ITEM_ID
+			      ,ITEM_SEGMENT1
+			      ,TRANSACTION_QUANTITY
+			      ,TRANSACTION_DATE
+			      ,SUBINVENTORY_CODE
+			      ,TRANSACTION_SOURCE_ID
+			      ,TRANSACTION_SOURCE_NAME
+			      ,TRANSACTION_TYPE_ID
+			      ,SOURCE_CODE
+			      ,SOURCE_LINE_ID
+			      ,SOURCE_HEADER_ID
+			      ,PROCESS_FLAG
+			      ,TRANSACTION_MODE
+			      ,CREATION_DATE
+			      ,CREATED_BY
+			      ,LAST_UPDATE_DATE
+			      ,LAST_UPDATED_BY
+			FROM   MTL_TRANSACTIONS_INTERFACE
+			WHERE  1 = 1
+			AND    CREATION_DATE >= TRUNC(SYSDATE,'MONTH')
+		]]> 
+  	</select>
+  	
+</mapper>

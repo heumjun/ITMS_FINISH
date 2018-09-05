@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SaveHolidayMgr">
+  	
+ 	<insert id="insert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_HOLIDAY_INFO(
+		  	   SEQ_ID
+		  	 , TITLE
+		  	 , HOLIDAY
+		  	 , COMMENTS
+		  	 , YEAR
+		     , CREATE_DATE 
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{title}
+			 , #{holiday}
+			 , #{comments}
+			 , #{year}
+		     , TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		     )
+	</insert>
+	
+	<update id="update" parameterType="java.util.Map">
+		UPDATE ITSM_HOLIDAY_INFO
+		   SET TITLE       = #{title}
+		      ,HOLIDAY     = #{holiday}
+		      ,COMMENTS    = #{comments}
+		      ,YEAR        = #{year}
+		      ,CREATE_DATE = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		 WHERE SEQ_ID = #{seq_id}
+	</update>
+  	
+  	<delete id="delete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_HOLIDAY_INFO
+		 WHERE SEQ_ID = #{seq_id}
+  	</delete>
+  	
+</mapper>

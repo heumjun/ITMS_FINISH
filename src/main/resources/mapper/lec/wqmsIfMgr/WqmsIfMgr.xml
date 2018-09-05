@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WqmsIfMgr">
+
+	<select id="wqmsIfMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		          FROM (SELECT COUNT(*) OVER() AS CNT
+		                      ,TRS_TYPE           AS TRS_TYPE
+		                      ,TRS_LINE_MSG       AS TRS_LINE_MSG
+		                      ,ERROR_MSG          AS ERROR_MSG
+		                      ,DECODE(RESULT_FLAG,'Y','성공','S','-','실패')       AS RESULT_FLAG
+		                      ,FILE_NAME           AS FILE_NAME
+		                      ,REAL_FILE_NAME      AS REAL_FILE_NAME
+		                      ,TO_CHAR(CREATION_DATE,'YYYY-MM-DD HH24:MI')       AS CREATION_DATE
+		                  FROM DQMS_TO_ERP_SFTP_LOG
+		                  WHERE 1=1
+		                  <if test="p_start_date != null and p_start_date !='' ">
+						     AND CREATION_DATE >= TO_DATE(#{p_start_date,jdbcType=VARCHAR},'YYYY-MM-DD')
+						  </if>
+						  <if test="p_end_date != null and p_end_date !='' ">
+						     AND CREATION_DATE <![CDATA[<]]>  TO_DATE(#{p_end_date,jdbcType=VARCHAR},'YYYY-MM-DD')+1
+						  </if>
+		                  
+		                  <if test='p_trs_type != null and !p_trs_type.equalsIgnoreCase("")'>
+						  	AND TRS_TYPE = #{p_trs_type}
+						  </if>
+						 
+						  <if test='p_result_flag != null and !p_result_flag.equalsIgnoreCase("")'>
+						  	<choose>
+						  		<when test='!p_result_flag.equalsIgnoreCase("F")'>
+						  			AND RESULT_FLAG = #{p_result_flag}
+						  		</when>
+						  		<otherwise>
+						  			AND RESULT_FLAG IS NULL
+						  		</otherwise>
+							</choose>
+						  </if>
+						  
+		                  ORDER BY CREATION_DATE DESC, TRS_TYPE 
+		                ) T1
+		       ) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<select id="wqmsIfMgrExcelExport" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+			SELECT TRS_TYPE           AS TRS_TYPE
+                     ,TRS_LINE_MSG       AS TRS_LINE_MSG
+                     ,ERROR_MSG          AS ERROR_MSG
+                     ,DECODE(RESULT_FLAG,'Y','성공','S','/','실패')       AS RESULT_FLAG
+                     ,FILE_NAME           AS FILE_NAME
+                     ,REAL_FILE_NAME      AS REAL_FILE_NAME
+                     ,TO_CHAR(CREATION_DATE,'YYYY-MM-DD HH24:MI')       AS CREATION_DATE
+                 FROM DQMS_TO_ERP_SFTP_LOG
+                 WHERE 1=1
+                 <if test="p_start_date != null and p_start_date !='' ">
+			     AND CREATION_DATE >= TO_DATE(#{p_start_date,jdbcType=VARCHAR},'YYYY-MM-DD')
+			  </if>
+			  <if test="p_end_date != null and p_end_date !='' ">
+			     AND CREATION_DATE <![CDATA[<]]>  TO_DATE(#{p_end_date,jdbcType=VARCHAR},'YYYY-MM-DD')+1
+			  </if>
+                 
+                 <if test='p_trs_type != null and !p_trs_type.equalsIgnoreCase("")'>
+			  	AND TRS_TYPE = #{p_trs_type}
+			  </if>
+			 
+			  <if test='p_result_flag != null and !p_result_flag.equalsIgnoreCase("")'>
+			  	<choose>
+			  		<when test='!p_result_flag.equalsIgnoreCase("F")'>
+			  			AND RESULT_FLAG = #{p_result_flag}
+			  		</when>
+			  		<otherwise>
+			  			AND RESULT_FLAG IS NULL
+			  		</otherwise>
+				</choose>
+			  </if>
+			  
+			ORDER BY CREATION_DATE DESC, TRS_TYPE 
+  	</select>
+  	
+</mapper>

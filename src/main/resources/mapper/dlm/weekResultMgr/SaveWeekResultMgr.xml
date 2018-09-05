@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="saveWeekManage">
+  	<!-- insert 전 중복 체크  -->
+  	<select id="duplicate" parameterType="java.util.Map" resultType="int" >
+		SELECT COUNT(*) AS CNT
+		  FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM
+		 WHERE IDWRM.ICUI_SEQ_ID = #{p_icui_seq_id}
+		   AND IDWRM.YEAR  = #{p_year}
+		   AND IDWRM.MONTH = #{p_month}
+		   AND IDWRM.CHASU = #{p_chasu}
+  	</select>
+</mapper>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="IpgoMgr">
+
+	<select id="ipgoMgrList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT RHI.ASN_TYPE
+		      ,RHI.SHIPMENT_NUM
+		      ,PIE.COLUMN_NAME
+		      ,PIE.ERROR_MESSAGE
+		      ,PIE.ERROR_MESSAGE_NAME
+		      ,RT.TRANSACTION_TYPE
+		      ,RT.TRANSACTION_DATE
+		      ,RT.PROCESSING_STATUS_CODE
+		      ,RT.TRANSACTION_STATUS_CODE
+		      ,RT.QUANTITY
+		      ,RT.PRIMARY_QUANTITY
+		      ,RT.ITEM_DESCRIPTION
+		      ,RT.DOCUMENT_NUM
+		      ,RT.DOCUMENT_LINE_NUM
+		      ,RT.ITEM_NUM
+		      ,RT.PO_HEADER_ID
+		      ,RT.PO_LINE_ID
+		      ,RT.PO_UNIT_PRICE
+		      ,RT.ATTRIBUTE12
+		      ,RT.ATTRIBUTE13
+		      ,RT.ATTRIBUTE14
+		      ,RT.HEADER_INTERFACE_ID
+		      ,RT.PROJECT_ID
+		      ,RT.TASK_ID
+		      ,RT.GROUP_ID
+		      ,RT.VENDOR_ID
+		      ,RT.VENDOR_SITE_ID
+		      ,RT.INTERFACE_TRANSACTION_ID
+		  FROM APPS.PO_INTERFACE_ERRORS@DMPROD_DSMISP        PIE
+		      ,APPS.RCV_TRANSACTIONS_INTERFACE@DMPROD_DSMISP RT
+		      ,APPS.RCV_HEADERS_INTERFACE@DMPROD_DSMISP      RHI
+		 WHERE PIE.INTERFACE_TYPE = 'RCV-856'
+		   AND PIE.INTERFACE_LINE_ID = RT.INTERFACE_TRANSACTION_ID
+		   AND RT.HEADER_INTERFACE_ID = RHI.HEADER_INTERFACE_ID
+		 ORDER BY RT.TRANSACTION_DATE DESC
+  	</select>
+  	
+  	<select id="ipgoMgrList1" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  		<![CDATA[
+			SELECT K3.*
+			  FROM (SELECT '1' AS ORDER_NUM, 'HIS' AS GUBUN, K2.*
+			          FROM XPO_RCV_TRANSACTIONS_HIS K2
+			        UNION ALL
+			        SELECT '2' AS ORDER_NUM, 'ORI' AS GUBUN, K1.*
+			          FROM APPS.XPO_RCV_TRANSACTIONS@DMPROD_DSMISP K1) K3
+			 WHERE TO_CHAR(CREATION_DATE, 'YYYY-MM-DD') > '2018-08-22'
+			   AND K3.ATTRIBUTE14 = 'TR18080062'
+			   AND K3.VENDOR_ID = '6800'
+			 ORDER BY K3.CREATION_DATE DESC, K3.INTERFACE_SOURCE_LINE_ID
+		]]>	 
+  	</select>
+  	
+  	<select id="ipgoMgrList2" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  		<![CDATA[
+			SELECT K3.*
+			  FROM (SELECT '1' AS ORDER_NUM, 'HIS' AS GUBUN, K2.*
+			          FROM RCV_HEADERS_INTERFACE_HIS K2
+			        UNION ALL
+			        SELECT '2' AS ORDER_NUM, 'ORI' AS GUBUN, K1.*
+			          FROM APPS.RCV_HEADERS_INTERFACE@DMPROD_DSMISP K1) K3
+			 WHERE TO_CHAR(K3.CREATION_DATE, 'YYYY-MM-DD') > '2018-08-22'
+			   AND K3.VENDOR_ID = '6800'
+			 ORDER BY K3.CREATION_DATE DESC, K3.SHIPMENT_NUM
+		]]>
+  	</select>
+  	
+  	<select id="ipgoMgrList3" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  		<![CDATA[
+			SELECT K3.*
+			  FROM (SELECT '1' AS ORDER_NUM, 'HIS' AS GUBUN, K2.*
+			          FROM RCV_TRANSACTIONS_INTERFACE_HIS K2
+			        UNION ALL
+			        SELECT '2' AS ORDER_NUM, 'ORI' AS GUBUN, K1.*
+			          FROM APPS.RCV_TRANSACTIONS_INTERFACE@DMPROD_DSMISP K1) K3
+			 WHERE TO_CHAR(K3.CREATION_DATE, 'YYYY-MM-DD') > '2018-08-22'
+			   AND K3.VENDOR_ID = '6800'
+			 ORDER BY K3.CREATION_DATE DESC, K3.SHIPMENT_NUM
+		]]>
+  	</select>
+  	
+</mapper>

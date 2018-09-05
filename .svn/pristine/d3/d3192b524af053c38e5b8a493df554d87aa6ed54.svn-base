@@ -1,0 +1,13 @@
+package com.web.admin.decryptMgr.service;
+
+import java.util.Map;
+
+import com.web.common.command.CommandMap;
+import com.web.common.service.CommonService;
+
+public interface DecryptService extends CommonService
+{
+
+	Map<String, String> passwdConfirm(CommandMap commandMap) throws Exception;
+
+}

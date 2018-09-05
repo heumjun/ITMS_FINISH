@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab7">
+
+	<!-- 7.tab : ETC --> 
+	<!-- Attachment -->
+	<select id="wipChkMgrList22" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			 SELECT MAX(INTERFACE_DATE) INTERFACE_DATE
+				      ,PERIOD_YYYYMM
+				      ,TYPE
+				      ,COUNT(1) AS COUNT
+				      ,INTERFACE_YN
+				      ,DELETE_YN
+				      ,ATTRIBUTE1
+				      ,ATTRIBUTE2
+				FROM   XWIP_ACTUAL_FILE_ATTACH_IF
+				WHERE  PERIOD_YYYYMM = TO_CHAR(SYSDATE,'YYYYMM')
+				GROUP BY PERIOD_YYYYMM, TYPE, INTERFACE_YN, DELETE_YN, ATTRIBUTE1, ATTRIBUTE2
+				ORDER BY TYPE, INTERFACE_DATE DESC
+	]]> 
+  	</select>
+  	
+	<!-- NDE AP -->
+  	<select id="wipChkMgrList23" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+  	<![CDATA[
+  		SELECT JOURNAL_STATUS
+		      ,JOURNAL_NUMBER
+		      ,EAI_APLS_DEAL_STATS_CD                   EAI_STATUS
+		      ,EAI_APLS_DEAL_DTM
+		      ,EAI_APLS_DEAL_ERR_MSG                    EAI_ERR_MSG
+		      ,EAI_TS_NO
+		      ,TRX_HEADER_ID
+		      ,GROUP_NUMBER
+		      ,TRX_NUMBER
+		      ,ACCOUNTING_DATE
+		      ,CURRENCY_CODE                            CURRENCY
+		      ,TO_CHAR(TRUNC(AMOUNT),'999,999,999,990') AMOUNT
+		      ,DESCRIPTION
+		      ,ACCOUNT_CODE
+		FROM   EGL.EGL_TRX_HEADER_IF
+		WHERE  MODULE           = 'AP'
+		AND    SOURCE           = 'ND'
+		AND    EVENT_ID         = 'ND-001'
+		AND    ACCOUNTING_DATE >= TRUNC(SYSDATE,'MONTH')
+	]]>       
+  	</select>
+  	
+</mapper>

@@ -1,0 +1,24 @@
+package com.web.lec.wqmsIfMgr.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.web.common.dao.CommonDAO;
+
+@Repository("lec.wqmsIfMgr.wqmsIfMgrDAO")
+public class WqmsIfMgrDAO extends CommonDAO
+{
+
+	public List<Map<String, Object>> wqmsIfMgrList(Map<String, Object> map)
+	{
+		return selectList("WqmsIfMgr.wqmsIfMgrList", map);
+	}
+	
+	public List<Map<String, Object>> wqmsIfMgrExcelExport(Map<String, Object> map)
+	{
+		return selectList("WqmsIfMgr.wqmsIfMgrExcelExport", map);
+	}
+
+}

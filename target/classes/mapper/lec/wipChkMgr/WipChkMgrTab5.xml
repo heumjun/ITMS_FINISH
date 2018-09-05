@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab5">
+
+	<!-- 5.tab : 제작 Actual --> 
+	<!-- Interface Table -->
+	<select id="wipChkMgrList12" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT X.*
+			FROM   XWIP_ACTUAL_RE_WEB_ENTRY_IF X
+			WHERE  1 = 1
+			AND    NVL(X.INTERFACE_YN,'!') <> 'Y'
+	]]> 
+  	</select>
+  	
+	<!-- Monthly Conunt -->
+  	<select id="wipChkMgrList13" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT TO_CHAR(XARH.ENTRY_DATE, 'YYYY-MM')                ENTRY_DATE
+			      ,TO_CHAR(SUM(TRUNC(XARH.AMOUNT)),'999,999,999,990') AMOUNT
+			      ,TO_CHAR(COUNT(*),'999,990')                        COUNT
+			FROM   XWIP_ACTUAL_RE_HEADERS XARH
+			WHERE  XARH.ENTRY_DATE >= TRUNC(LAST_DAY(ADD_MONTHS(SYSDATE,-6)))
+			GROUP BY TO_CHAR(XARH.ENTRY_DATE,'YYYY-MM')
+			ORDER BY TO_CHAR(XARH.ENTRY_DATE,'YYYY-MM') DESC
+	]]> 
+  	</select>
+  	
+	<!-- Header Check -->
+  	<select id="wipChkMgrList14" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT A.*
+			FROM   (SELECT XL.*
+			              ,(SELECT COUNT(*)
+			                FROM   XWIP_ACTUAL_RE_HEADERS XH
+			                WHERE  XH.ENTRY_HEADER_ID = XL.ENTRY_HEADER_ID) HEADER_CNT
+			              ,(SELECT XH.ENTRY_DATE
+			                FROM   XWIP_ACTUAL_RE_HEADERS XH
+			                WHERE  XH.ENTRY_HEADER_ID = XL.ENTRY_HEADER_ID) ENTRY_DATE
+			        FROM   XWIP_ACTUAL_RE_LINES XL
+			       ) A
+			WHERE  1 = 1
+			AND    A.HEADER_CNT <> 1
+			AND    A.ENTRY_DATE >= TRUNC(SYSDATE,'MONTH')
+	]]> 
+  	</select>
+  	
+	<!-- Line or Amount Check -->
+  	<select id="wipChkMgrList15" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT CASE WHEN A.AMOUNT  <> A.LINE_AMT THEN 'Not Match Amount'
+			            WHEN A.AMOUNT   = 0          THEN 'Header Amount = 0'
+			            WHEN A.LINE_AMT = 0          THEN 'Line Amount = 0'
+			            WHEN A.LINE_CNT = 0          THEN 'Line Record = 0'
+			       END AS TYPE_NAME
+			      ,A.*
+			FROM   (SELECT XH.*
+			              ,(SELECT SUM(XL.AMOUNT)
+			                FROM   XWIP_ACTUAL_RE_LINES XL
+			                WHERE  XL.ENTRY_HEADER_ID = XH.ENTRY_HEADER_ID) LINE_AMT
+			              ,(SELECT COUNT(*)
+			                FROM   XWIP_ACTUAL_RE_LINES XL
+			                WHERE  XL.ENTRY_HEADER_ID = XH.ENTRY_HEADER_ID) LINE_CNT
+			        FROM   XWIP_ACTUAL_RE_HEADERS XH
+			       ) A
+			WHERE  1 = 1
+			AND    (A.AMOUNT <> A.LINE_AMT OR A.AMOUNT = 0 OR A.LINE_AMT = 0 OR A.LINE_CNT = 0)
+			AND    A.ENTRY_DATE >= TRUNC(SYSDATE,'MONTH')
+	]]> 
+  	</select>
+  	
+	<!-- QTY Compare -->
+  	<select id="wipChkMgrList16" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT *
+			FROM   (SELECT XARH.PUR_LINE_IF_ID
+			              ,XARH.CURRENT_STATUS
+			              ,XARH.ATTRIBUTE3 AS QTY
+			              ,XARH.AMOUNT
+			              ,NVL((SELECT SUM(RSL.QUANTITY_RECEIVED)
+			                    FROM   RCV_TRANSACTIONS      RT
+			                          ,RCV_SHIPMENT_HEADERS  RSH
+			                          ,RCV_SHIPMENT_LINES    RSL
+			                    WHERE  RT.SHIPMENT_HEADER_ID  = RSH.SHIPMENT_HEADER_ID
+			                    AND    RT.SHIPMENT_LINE_ID    = RSL.SHIPMENT_LINE_ID
+			                    AND    RSH.SHIPMENT_HEADER_ID = RSL.SHIPMENT_HEADER_ID
+			                    AND    RT.PO_HEADER_ID        = XARH.POH_ID
+			                    AND    RT.PO_LINE_ID          = XARH.POL_ID
+			                    AND    RT.TRANSACTION_TYPE    = 'RECEIVE'
+			                    AND    RSH.SHIPPED_DATE BETWEEN TRUNC(XARH.ENTRY_DATE,'MONTH')
+			                                                AND LAST_DAY(XARH.ENTRY_DATE)),0) AS RCV_QTY
+			              ,(SELECT NVL(SUM(RSL.QUANTITY_RECEIVED * RT.PO_UNIT_PRICE),0)
+			                FROM   RCV_TRANSACTIONS      RT
+			                      ,RCV_SHIPMENT_HEADERS  RSH
+			                      ,RCV_SHIPMENT_LINES    RSL
+			                WHERE  RT.SHIPMENT_HEADER_ID  = RSH.SHIPMENT_HEADER_ID
+			                AND    RT.SHIPMENT_LINE_ID    = RSL.SHIPMENT_LINE_ID
+			                AND    RSH.SHIPMENT_HEADER_ID = RSL.SHIPMENT_HEADER_ID
+			                AND    RT.PO_HEADER_ID        = XARH.POH_ID
+			                AND    RT.PO_LINE_ID          = XARH.POL_ID
+			                AND    RT.TRANSACTION_TYPE    = 'RECEIVE'
+			                AND    RSH.SHIPPED_DATE BETWEEN TRUNC(XARH.ENTRY_DATE,'MONTH')
+			                                            AND LAST_DAY(XARH.ENTRY_DATE)) AS RCV_AMT
+			              ,XARH.POH_ID
+			              ,XARH.POL_ID
+			        FROM   XWIP_ACTUAL_RE_HEADERS XARH
+			        WHERE  XARH.ENTRY_DATE >= TRUNC(SYSDATE,'MONTH')
+			       ) A
+			WHERE  1 = 1
+			AND    A.QTY <> A.RCV_QTY
+	]]> 
+  	</select>
+  	
+	<!-- RCV Overlap -->
+  	<select id="wipChkMgrList17" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT POH_ID
+			      ,POL_ID
+			      ,PO_NUMBER
+			      ,PO_LINE
+			      ,TO_NUMBER(QUANTITY) WIP_QTY
+			      ,AMOUNT              WIP_AMT
+			      ,(SELECT RT.TRANSACTION_DATE
+			        FROM   RCV_TRANSACTIONS       RT
+			              ,RCV_SHIPMENT_HEADERS   RSH
+			              ,RCV_SHIPMENT_LINES     RSL
+			        WHERE  RT.SHIPMENT_HEADER_ID              = RSH.SHIPMENT_HEADER_ID
+			        AND    RT.SHIPMENT_LINE_ID                = RSL.SHIPMENT_LINE_ID
+			        AND    RSH.SHIPMENT_HEADER_ID             = RSL.SHIPMENT_HEADER_ID
+			        AND    RT.TRANSACTION_TYPE                = 'DELIVER'
+			        AND    TRUNC(RT.TRANSACTION_DATE,'MONTH') = X.ENTRY_DATE
+			        AND    RT.PO_LINE_ID                      = X.POL_ID) RCV_DATE
+			      ,(SELECT RT.QUANTITY
+			        FROM   RCV_TRANSACTIONS       RT
+			              ,RCV_SHIPMENT_HEADERS   RSH
+			              ,RCV_SHIPMENT_LINES     RSL
+			        WHERE  RT.SHIPMENT_HEADER_ID              = RSH.SHIPMENT_HEADER_ID
+			        AND    RT.SHIPMENT_LINE_ID                = RSL.SHIPMENT_LINE_ID
+			        AND    RSH.SHIPMENT_HEADER_ID             = RSL.SHIPMENT_HEADER_ID
+			        AND    RT.TRANSACTION_TYPE                = 'DELIVER'
+			        AND    TRUNC(RT.TRANSACTION_DATE,'MONTH') = X.ENTRY_DATE
+			        AND    RT.PO_LINE_ID                      = X.POL_ID) RCV_QTY
+			FROM   (SELECT TRUNC(XARH.ENTRY_DATE,'MONTH')                        ENTRY_DATE
+			              ,XARH.ENTRY_SYSTEM                                     ENTRY_SYSTEM
+			              ,XARH.ENTRY_HEADER_ID                                  ENTRY_HEADER_ID
+			              ,XARH.PUR_LINE_IF_ID                                   PUR_LINE_IF_ID
+			              ,XARH.CURRENT_STATUS                                   CURRENT_STATUS
+			              ,XARH.POH_ID                                           POH_ID
+			              ,(SELECT PHA.SEGMENT1
+			                FROM   PO_HEADERS_ALL PHA
+			                WHERE  PHA.PO_HEADER_ID = XARH.POH_ID)               PO_NUMBER
+			              ,XARH.POL_ID
+			              ,(SELECT PLA.LINE_NUM
+			                FROM   PO_LINES_ALL PLA
+			                WHERE  PLA.PO_LINE_ID = XARH.POL_ID)                 PO_LINE
+			              ,(SELECT attribute3
+			                FROM   XWIP_ACTUAL_RE_LINES XARL
+			                WHERE  XARL.ENTRY_HEADER_ID = XARH.ENTRY_HEADER_ID)  QUANTITY
+			              ,XARH.AMOUNT                                           AMOUNT
+			        FROM   XWIP_ACTUAL_RE_HEADERS XARH
+			        WHERE  1 = 1
+			        AND    XARH.ENTRY_DATE >= TRUNC(SYSDATE,'MONTH')) X
+			-- 에러확인용 
+			WHERE  (PO_NUMBER,PO_LINE) IN (SELECT RT.DOCUMENT_NUM
+			                                     ,RT.DOCUMENT_LINE_NUM
+			                               FROM   PO_INTERFACE_ERRORS         PI
+			                                     ,RCV_HEADERS_INTERFACE       RH
+			                                     ,RCV_TRANSACTIONS_INTERFACE  RT
+			                               WHERE  1 = 1
+			                               AND    PI.INTERFACE_LINE_ID   = RT.INTERFACE_TRANSACTION_ID
+			                               AND    RT.HEADER_INTERFACE_ID = RH.HEADER_INTERFACE_ID) 
+	]]> 
+  	</select>
+  	
+	<!-- Not Processed -->
+  	<select id="wipChkMgrList18" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT XARH.ENTRY_SYSTEM
+			      ,XARH.ENTRY_HEADER_ID
+			      ,XARH.PUR_LINE_IF_ID
+			      ,XARH.CURRENT_STATUS
+			      ,(SELECT MAX(XARL.LINE_STATUS)
+			        FROM   XWIP_ACTUAL_RE_LINES XARL
+			        WHERE  XARL.ENTRY_HEADER_ID = XARH.ENTRY_HEADER_ID) LINE_STATUS
+			      ,(SELECT FLV.MEANING
+			        FROM   FND_LOOKUP_VALUES FLV
+			        WHERE  FLV.LOOKUP_TYPE = 'XDSM_MFG_CM_LINE_STATUS'
+			        AND    FLV.LOOKUP_CODE = (SELECT MAX(XARL.LINE_STATUS)
+			                                  FROM   XWIP_ACTUAL_RE_LINES XARL
+			                                  WHERE  XARL.ENTRY_HEADER_ID = XARH.ENTRY_HEADER_ID)) LINE_STATUS_NAME
+			      ,(SELECT PV.VENDOR_NAME
+			        FROM   PO_VENDORS PV
+			        WHERE  PV.VENDOR_ID = XARH.PO_VENDOR_ID) VENDOR_NAME
+			      ,XARH.POH_ID
+			      ,(SELECT PHA.SEGMENT1
+			        FROM   PO_HEADERS_ALL PHA
+			        WHERE  PHA.PO_HEADER_ID = XARH.POH_ID) PO_NUMBER
+			      ,XARH.POL_ID
+			      ,(SELECT PLA.LINE_NUM
+			        FROM   PO_LINES_ALL PLA
+			        WHERE  PLA.PO_LINE_ID = XARH.POL_ID) PO_LINE
+			      ,(SELECT PDA.PROJECT_ID
+			        FROM   PO_LINES_ALL         PLA
+			              ,PO_DISTRIBUTIONS_ALL PDA
+			        WHERE  PLA.PO_LINE_ID = PDA.PO_LINE_ID
+			        AND    PLA.PO_LINE_ID = XARH.POL_ID) PROJECT_ID
+			      ,(SELECT PPA.SEGMENT1
+			        FROM   PO_LINES_ALL         PLA
+			              ,PO_DISTRIBUTIONS_ALL PDA
+			              ,PA_PROJECTS_ALL      PPA
+			        WHERE  PLA.PO_LINE_ID = PDA.PO_LINE_ID
+			        AND    PDA.PROJECT_ID = PPA.PROJECT_ID
+			        AND    PLA.PO_LINE_ID = XARH.POL_ID) PROJECT_NUMBER
+			      ,XARH.PRE_SUM    
+			      ,XARH.CURRENT_SUM
+			      ,XARH.RESIDUAL   
+			      ,XARH.AMOUNT     
+			      ,XARH.REQUEST_APPR_ID
+			      ,(SELECT DESCRIPTION 
+			        FROM   FND_USER 
+			        WHERE  USER_ID = XARH.REQUEST_APPR_ID) APPR_NAME
+			      ,XARH.SUBMIT_TEAM
+			      ,(SELECT HA.NAME
+			        FROM   HR.HR_ALL_ORGANIZATION_UNITS HA 
+			        WHERE  HA.ORGANIZATION_ID = XARH.SUBMIT_TEAM) TEAM
+			      ,XARH.SUBMIT_EMPLOYEE_ID 
+			      ,XARH.CREATED_BY         
+			      ,(SELECT PAP.LAST_NAME   
+			        FROM   PER_ALL_PEOPLE_F PAP
+			        WHERE  PAP.PERSON_ID = XARH.SUBMIT_EMPLOYEE_ID) EMPLOYEE
+			      ,(SELECT MAX(XED.APRDOCSTATE_MSG)||'-'||MAX(FU.DESCRIPTION)
+			        FROM   XWIP.XWIP_EAS_QUO_LISTS_ALL   XEL  
+			              ,XPO.XPO_EAS_DRAFTING_HISTORY  XED  
+			              ,(SELECT MASTER_SEQUENCE_ID                        
+			                      ,MAX(DRAFT_SEQUENCE_ID) DRAFT_SEQUENCE_ID  
+			                FROM   XPO.XPO_EAS_DRAFTING_HISTORY
+			                GROUP BY MASTER_SEQUENCE_ID) XM                 
+			              ,FND_USER  FU                 
+			        WHERE  XEL.MASTER_SEQUENCE_ID = XED.MASTER_SEQUENCE_ID   
+			        AND    XEL.ENTRY_HEADER_ID    = XARH.ENTRY_HEADER_ID     
+			        AND    XED.MASTER_SEQUENCE_ID = XM.MASTER_SEQUENCE_ID    
+			        AND    XED.DRAFT_SEQUENCE_ID  = XM.DRAFT_SEQUENCE_ID     
+			        AND    XED.APPROVER_USERID    = TO_CHAR(FU.USER_ID)) EAS_STATUS
+			      ,XARH.CREATION_DATE
+			      ,XARH.LAST_UPDATE_DATE
+			FROM   XWIP.XWIP_ACTUAL_RE_HEADERS XARH
+			WHERE  1 = 1
+			AND    XARH.CURRENT_STATUS NOT IN ('Approved')
+			AND    XARH.ENTRY_DATE >= TRUNC(SYSDATE,'MONTH')
+			ORDER BY 4,XARH.SUBMIT_TEAM,XARH.SUBMIT_EMPLOYEE_ID,XARH.PO_VENDOR_ID
+	]]> 
+  	</select>
+  	
+</mapper>

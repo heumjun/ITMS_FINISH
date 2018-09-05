@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="DistbMgr">
+
+	<select id="distbRequestList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+			SELECT T2.*
+			  FROM (SELECT T1.*
+			             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+			          FROM 
+			          (  
+							SELECT COUNT(*) OVER() AS CNT
+							      ,ILDPI.SEQ_ID
+							      ,ILDPI.ICUI_SEQ_ID
+							      ,ILDPI.TITLE
+							      ,ILDPI.CONTENTS
+							      ,ILDPI.STATUS
+							      ,DECODE(ILDPI.STATUS, 'R', '신청', 'N', '처리대기' , 'S', '처리완료', '처리불가') AS STATUS_NAME
+							      ,ILDPI.COMMENTS
+							      ,TO_CHAR(ILDPI.CREATE_DATE, 'YYYY-MM-DD HH24:MI') AS CREATE_DATE
+							      ,ILDPI.CHARGE
+							      ,(SELECT NAME
+							          FROM ITSM_COM_USER_INFO
+							         WHERE LOGIN_ID = ILDPI.CHARGE) AS CHARGE_NAME
+							      ,(SELECT NAME
+			                          FROM ITSM_COM_USER_INFO
+			                         WHERE LOGIN_ID = ILDPI.CREATED_BY) AS USER_NAME
+							      ,ILDPI.CREATED_BY
+							      ,ILDPI.LAST_UPDATE_DATE
+							      ,ILDPI.LAST_UPDATE_BY
+							      ,ILDPI.TERM
+							      ,DECODE(ILDPI.TERM, 'N', '일반', '긴급') AS TERM_NAME
+							  FROM ITSM_LE_DISTB_PCS_INFO ILDPI
+							 WHERE 1=1
+							 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+					           AND ILDPI.TITLE LIKE '%' || #{p_title} || '%'
+					         </if>
+					         <if test='p_sel_status != null and !p_sel_status.equalsIgnoreCase("")'>
+					           AND ILDPI.STATUS = #{p_sel_status}
+					         </if>
+					         
+					         ORDER BY ILDPI.CREATE_DATE DESC
+						) T1 
+						WHERE 1=1
+						 <if test='p_user_name != null and !p_user_name.equalsIgnoreCase("")'>
+				           AND USER_NAME LIKE '%' || #{p_user_name} || '%'
+				         </if>
+				         
+				         <if test='loginId != approvalAdmin and !loginId.equalsIgnoreCase("admin")'>
+							AND T1.CREATED_BY = #{loginId}
+						</if>
+					) T2
+			 WHERE PAGE = #{curPageNo}
+	</select>
+	
+	<insert id="distbRequestInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_LE_DISTB_PCS_INFO(
+		  	   SEQ_ID
+		  	 , ICUI_SEQ_ID  
+	  		 , TITLE 
+		     , CONTENTS
+		     , STATUS
+		     , COMMENTS
+		     , CHARGE
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+		     , TERM
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_icui_seq_id} 
+			 , #{p_title}
+		     , #{p_contents}
+		     , 'R'
+		     , ''
+		     , #{p_sel_charge}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     , #{p_term}
+		     )
+	</insert>
+	
+	<update id="distbRequestUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_LE_DISTB_PCS_INFO
+		   SET TITLE            = #{p_title}
+		      ,CONTENTS         = #{p_contents}
+		      ,CHARGE			= #{p_sel_charge}
+		      ,LAST_UPDATE_DATE = SYSDATE
+		      ,LAST_UPDATE_BY   = #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<insert id="saveDistbAttachFileInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_ATTACH_INFO (
+		  	   SEQ_ID
+		  	 , REF_TABLE_SEQ_ID  
+	  		 , FILE_PATH 
+		     , FILE_NAME
+		     , FILE_SIZE
+		     , FILE_TYPE
+		     , ORG_FILE_NAME
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{ref_table_seq_id} 
+			 , #{file_path}
+			 , #{file_name}
+			 , #{file_size}
+			 , #{file_type}
+		     , #{org_file_name}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<select id="getDistb" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT ILDPI.SEQ_ID
+		      ,ILDPI.ICUI_SEQ_ID
+		      ,ILDPI.TITLE
+		      ,ILDPI.CONTENTS
+		      ,ILDPI.STATUS
+		      ,ILDPI.COMMENTS
+		      ,TO_CHAR(ILDPI.CREATE_DATE, 'YYYY-MM-DD HH24:MI') AS CREATE_DATE
+		      ,(SELECT E_MAIL
+		          FROM ITSM_COM_USER_INFO
+		         WHERE LOGIN_ID = ILDPI.CREATED_BY) AS CREATE_MAIL 
+		      ,(SELECT NAME
+                  FROM ITSM_COM_USER_INFO
+                 WHERE LOGIN_ID = ILDPI.CREATED_BY) AS USER_NAME
+		      ,ILDPI.CREATED_BY
+		      ,ILDPI.LAST_UPDATE_DATE
+		      ,ILDPI.LAST_UPDATE_BY
+		      ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = ILDPI.CHARGE) AS CHARGE_NAME
+      		  ,(SELECT E_MAIL FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = ILDPI.CHARGE) AS CHARGE_MAIL
+      		  ,(SELECT NAME FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{approvalAdmin}) AS APPROVAL_NAME
+      		  ,(SELECT E_MAIL FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{approvalAdmin}) AS APPROVAL_MAIL
+      		  ,ILDPI.TERM
+		  FROM ITSM_LE_DISTB_PCS_INFO ILDPI
+		 WHERE ILDPI.SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+  	<select id="popUpDistbAttachList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT COUNT(*) OVER() AS CNT, SEQ_ID, ORG_FILE_NAME, FILE_PATH, ROUND(FILE_SIZE/1024,1) AS FILE_SIZE
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{p_seq_id}
+  	</select>
+  	
+  	<select id="selectFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT ORG_FILE_NAME, FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</select>
+  	
+  	<select id="getAttachFileInfo" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT FILE_PATH
+		  FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</select>
+  	
+  	<delete id="distbAttachDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE REF_TABLE_SEQ_ID = #{seq_id}
+  	</delete>
+  	
+  	<delete id="distbDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_LE_DISTB_PCS_INFO
+		 WHERE SEQ_ID = #{seq_id}
+  	</delete>
+  	
+  	<update id="updateDistbApproveProcess" parameterType="java.util.Map">
+		UPDATE ITSM_LE_DISTB_PCS_INFO
+		   SET STATUS = 'N'
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<select id="distbProcessList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+			SELECT T2.*
+			  FROM (SELECT T1.*
+			             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+			          FROM 
+			          (  
+							SELECT COUNT(*) OVER() AS CNT
+							      ,ILDPI.SEQ_ID
+							      ,ILDPI.ICUI_SEQ_ID
+							      ,ILDPI.TITLE
+							      ,ILDPI.CONTENTS
+							      ,ILDPI.STATUS
+							      ,DECODE(ILDPI.STATUS, 'R', '신청', 'N', '처리대기' , 'S', '처리완료', '처리불가') AS STATUS_NAME
+							      ,ILDPI.COMMENTS
+							      ,TO_CHAR(ILDPI.CREATE_DATE, 'YYYY-MM-DD HH24:MI') AS CREATE_DATE
+							      ,ILDPI.CHARGE
+							      ,(SELECT NAME
+							          FROM ITSM_COM_USER_INFO
+							         WHERE LOGIN_ID = ILDPI.CHARGE) AS CHARGE_NAME
+							      ,(SELECT NAME
+			                          FROM ITSM_COM_USER_INFO
+			                         WHERE LOGIN_ID = ILDPI.CREATED_BY) AS USER_NAME
+							      ,ILDPI.CREATED_BY
+							      ,ILDPI.LAST_UPDATE_DATE
+							      ,ILDPI.LAST_UPDATE_BY
+							      ,ILDPI.TERM
+							      ,DECODE(ILDPI.TERM, 'N', '일반', '긴급') AS TERM_NAME
+							  FROM ITSM_LE_DISTB_PCS_INFO ILDPI
+							 WHERE 1=1
+							   AND ILDPI.STATUS NOT IN ('R')
+							 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+					           AND ILDPI.TITLE LIKE '%' || #{p_title} || '%'
+					         </if>
+					         <if test='p_sel_status != null and !p_sel_status.equalsIgnoreCase("")'>
+					           AND ILDPI.STATUS = #{p_sel_status}
+					         </if>
+					         
+					         ORDER BY ILDPI.CREATE_DATE DESC
+						) T1 
+						WHERE 1=1
+						 <if test='p_user_name != null and !p_user_name.equalsIgnoreCase("")'>
+				           AND USER_NAME LIKE '%' || #{p_user_name} || '%'
+				         </if>
+				         
+				         <if test='!loginId.equalsIgnoreCase("admin")'>
+							AND T1.CHARGE = #{loginId}
+						</if>
+				         
+					) T2
+			 WHERE PAGE = #{curPageNo}
+	</select>
+	
+	<update id="updateDistbProcess" parameterType="java.util.Map">
+		UPDATE ITSM_LE_DISTB_PCS_INFO
+		   SET STATUS = #{p_status}
+		      ,COMMENTS = #{p_comments}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<delete id="distbAttachFileDelete" parameterType="java.util.Map">
+  		DELETE FROM ITSM_COM_ATTACH_INFO
+		 WHERE SEQ_ID IN (
+		<foreach collection="p_attach_seq_id" item="item" separator=",">
+			#{item}
+		</foreach>
+		)
+  	</delete>
+  	
+  	<select id="sendMail"  statementType="CALLABLE" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		{call zoas_mailer.send_mail(
+				i_sender 	=> #{i_sender, 			jdbcType=VARCHAR, mode=IN},
+				i_receiver 	=> #{i_receiver, 		jdbcType=VARCHAR, mode=IN},
+				i_message 	=> #{i_message, 		jdbcType=VARCHAR,mode=IN},
+				i_subject 	=> #{i_subject, 		jdbcType=VARCHAR,mode=IN},
+				o_err 		=> #{o_err,      		jdbcType=VARCHAR, javaType=java.lang.String, mode=OUT})
+		}
+	</select>
+	
+	<select id="getUserMail" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT (SELECT NAME FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{loginId}) AS USER_NAME
+		      ,(SELECT E_MAIL FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{loginId}) AS CREATE_MAIL
+		      ,(SELECT E_MAIL
+		          FROM ITSM_COM_USER_INFO
+		         WHERE LOGIN_ID = #{approvalAdmin}) AS APPROVAL_MAIL
+		      ,TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI') AS CREATE_DATE   
+		  FROM DUAL
+	</select>
+  	
+</mapper>

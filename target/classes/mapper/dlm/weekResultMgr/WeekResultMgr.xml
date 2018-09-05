@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WeekResultMgr">
+
+	<select id="weekManageList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		          FROM (SELECT COUNT(*) OVER() AS CNT
+		                      ,IDWRM.SEQ_ID
+		                      ,IDWRM.ICUI_SEQ_ID
+		                      ,ICUI.LOGIN_ID  AS LOGIN_ID
+		                      ,ICUI.NAME      AS USER_NAME
+		                      ,ICUI.ORDER_NUM AS ORDER_NUM
+		                      ,IDWRM.YEAR   
+		                      ,IDWRM.MONTH || '/' || IDWRM.CHASU AS MONTHCHASU
+		                      ,IDWRM.MONTH
+		                      ,IDWRM.CHASU
+		                      ,TO_CHAR(IDWRM.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE
+		                  FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM
+		                      ,ITSM_COM_USER_INFO ICUI
+		                 WHERE IDWRM.ICUI_SEQ_ID = ICUI.SEQ_ID
+		                 
+		                ) T1
+		         WHERE 1 = 1
+
+	             <if test='loginId != null and !loginId.equalsIgnoreCase("admin")'>
+	               AND LOGIN_ID = #{loginId}
+	             </if> 		         
+	             <if test='p_year != null and !p_year.equalsIgnoreCase("")'>
+	               AND YEAR = #{p_year}
+	             </if>  
+	             <if test='p_month != null and !p_month.equalsIgnoreCase("")'>
+	               AND MONTH = #{p_month}
+	             </if>
+	             <if test='p_chasu != null and !p_chasu.equalsIgnoreCase("")'>
+	               AND CHASU = #{p_chasu}
+	             </if> 
+	             
+	             ORDER BY T1.YEAR || T1.MONTH || T1.CHASU DESC , TO_NUMBER(T1.ORDER_NUM)
+		      ) T2
+		 WHERE PAGE = #{curPageNo}
+	</select>
+	
+	<insert id="saveWeekManageInsert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_DLM_WEEK_RESULT_MGR(
+		  	   SEQ_ID
+	  		 , ICUI_SEQ_ID 
+		     , YEAR
+		     , MONTH 
+		     , CHASU 
+		     , CONTENTS
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_icui_seq_id}
+		     , #{p_year}
+		     , #{p_month}
+		     , #{p_chasu}
+		     , #{p_content}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="saveWeekManageUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_DLM_WEEK_RESULT_MGR
+		   SET ICUI_SEQ_ID      = #{p_icui_seq_id}
+		      ,YEAR             = #{p_year}
+		      ,MONTH            = #{p_month}
+		      ,CHASU            = #{p_chasu}
+		      ,CONTENTS         = #{p_content}
+		      ,LAST_UPDATE_DATE = SYSDATE
+		      ,LAST_UPDATE_BY   = #{loginId}
+		 WHERE SEQ_ID = #{seq_id}
+	</update>
+	
+	<resultMap id="weekManageMaps"  type="java.util.HashMap" >
+        <result column="SEQ_ID"	 		property="SEQ_ID"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="ICUI_SEQ_ID"	property="ICUI_SEQ_ID"	javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="LOGIN_ID"	 	property="LOGIN_ID"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="USER_NAME"	 	property="USER_NAME"	javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="YEAR"	 		property="YEAR"			javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="MONTH"	 		property="MONTH"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="CHASU"	 		property="CHASU"		javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="CONTENTS" 		property="CONTENTS" 	javaType="java.lang.String" jdbcType="CLOB" />
+	</resultMap>
+	
+	<select id="weekManageOnClick" parameterType="java.util.Map" resultMap="weekManageMaps" >
+		SELECT IDWRM.SEQ_ID
+              ,IDWRM.ICUI_SEQ_ID
+              ,(SELECT LOGIN_ID
+                  FROM ITSM_COM_USER_INFO
+                 WHERE SEQ_ID = IDWRM.ICUI_SEQ_ID) AS LOGIN_ID
+              ,(SELECT NAME
+                  FROM ITSM_COM_USER_INFO
+                 WHERE SEQ_ID = IDWRM.ICUI_SEQ_ID) AS USER_NAME
+              ,IDWRM.YEAR   
+              ,IDWRM.MONTH
+              ,IDWRM.CHASU
+              ,IDWRM.CONTENTS
+              ,TO_CHAR(IDWRM.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE
+          FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM
+		 WHERE SEQ_ID = #{p_seq_id} 
+	</select>
+
+	<select id="weekManageOnClick2" parameterType="java.util.Map" resultMap="weekManageMaps" >
+        SELECT IDWRM.CONTENTS
+          FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM 
+              ,ITSM_COM_USER_INFO ICUI
+         WHERE IDWRM.ICUI_SEQ_ID = ICUI.SEQ_ID
+           AND ICUI.LOGIN_ID  = #{loginId}
+           AND ROWNUM = 1
+           ORDER BY IDWRM.CREATE_DATE DESC 		 				
+	</select>
+	
+	<select id="weekInfoList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*, FLOOR((ROWNUM - 1) / #{pageSize} + 1) AS PAGE
+		          FROM (SELECT COUNT(*) OVER() AS CNT
+		                      ,IDWRM.YEAR
+		                      ,IDWRM.MONTH || '/' || IDWRM.CHASU AS MONTHCHASU
+		                      ,IDWRM.MONTH
+		                      ,IDWRM.CHASU
+		                  FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM
+		                 GROUP BY IDWRM.YEAR, IDWRM.MONTH, IDWRM.CHASU
+		                 ORDER BY TO_NUMBER(IDWRM.YEAR || IDWRM.MONTH || IDWRM.CHASU) DESC ) T1
+		         WHERE 1 = 1
+		         <if test='p_year != null and !p_year.equalsIgnoreCase("")'>
+	               AND YEAR = #{p_year}
+	             </if>
+	             <if test='p_month != null and !p_month.equalsIgnoreCase("")'>
+	               AND MONTH = #{p_month}
+	             </if>
+	             <if test='p_chasu != null and !p_chasu.equalsIgnoreCase("")'>
+	               AND CHASU = #{p_chasu}
+	             </if>
+		        ) T2
+		 WHERE PAGE = #{curPageNo}
+	</select>
+	
+	<resultMap id="weekInfoMaps"  type="java.util.HashMap" >
+        <result column="STR" 			property="STR" 			javaType="java.lang.String" jdbcType="CLOB" />
+        <result column="CONTENTS" 		property="CONTENTS" 	javaType="java.lang.String" jdbcType="CLOB" />
+	</resultMap>
+	
+	<select id="weekInfoDetail" parameterType="java.util.Map" resultMap="weekInfoMaps" >
+		<![CDATA[
+	      SELECT XMLAGG(XMLELEMENT(A, IDWRM.CONTENTS) ORDER BY IDWRM.MONTH, IDWRM.CHASU).EXTRACT('//text()')
+	           .GETCLOBVAL() AS STR 
+	           ,XMLAGG(XMLELEMENT(COL,  DECODE(ICUI.ERP_LEGACY_WRM_TITLE, NULL,'', '<hr /><FONT SIZE=5>' || ICUI.ERP_LEGACY_WRM_TITLE  || '</FONT><br />')  || CHR(42) || ' <B><FONT SIZE=3>작성자: ' || ICUI.NAME || '(' || ICUI.BUSINESS_ROLE  || ')' || '</B></FONT><br />', IDWRM.CONTENTS) ORDER BY TO_NUMBER(ICUI.ORDER_NUM),   IDWRM.MONTH, IDWRM.CHASU).EXTRACT('//text()')
+	           .GETCLOBVAL() AS CONTENTS
+			FROM ITSM_DLM_WEEK_RESULT_MGR IDWRM
+			    ,ITSM_COM_USER_INFO ICUI
+			WHERE 1 = 1
+			  AND IDWRM.YEAR  = #{p_year}
+			  AND IDWRM.MONTH = #{p_month}
+			  AND IDWRM.CHASU = #{p_chasu}
+			  AND IDWRM.ICUI_SEQ_ID = ICUI.SEQ_ID
+			  AND ICUI.SM_MAN_FLAG = 'Y'
+			  GROUP BY IDWRM.YEAR, IDWRM.MONTH, IDWRM.CHASU
+			  ORDER BY IDWRM.YEAR, IDWRM.MONTH, IDWRM.CHASU DESC 
+		]]>			 
+	</select>
+	
+
+</mapper>

@@ -1,0 +1,139 @@
+package com.web.scheduler.service;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.web.common.command.CommandMap;
+import com.web.scheduler.dao.SchedulerMgrDAO;
+
+/**
+ * 
+ * @파일명    : SchedulerMgrServiceImpl.java 
+ * @프로젝트	: ITMS
+ * @날짜		: 2018. 8. 16.
+ * @작성자	: Son JungHwi
+ * @설명
+ * 
+ * <pre>
+ * 		배치 서비스 
+ * </pre>
+ */
+@Service("schedulerMgrService")
+public class SchedulerMgrServiceImpl implements SchedulerMgrService
+{
+
+	/**
+	 * 배치 DAO정의
+	 */
+	@Resource(name = "schedulerMgrDAO")
+	private SchedulerMgrDAO schedulerMgrDAO;
+	
+	/**
+	 * 
+	 * @메소드명	: getErrorCnt1
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			입고오류 취득
+	 * 	</pre>
+	 * @param map
+	 * @return error count
+	 * @throws 
+	 */
+	@Override
+	public int getErrorCnt1(Map<String, Object> map)
+	{
+		int cnt = 0;
+		
+		try 
+		{
+					
+			cnt = schedulerMgrDAO.getErrorCnt1(null);
+			
+		} 
+		catch (Exception e) 
+		{
+			System.out.println(e.getMessage());
+		}
+		return cnt;
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: getErrorCnt2
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			자재이동오류 취득
+	 * 	</pre>
+	 * @param map
+	 * @return error count
+	 * @throws 
+	 */
+	@Override
+	public int getErrorCnt2(Map<String, Object> map)
+	{
+		int cnt = 0;
+		
+		try 
+		{
+					
+			cnt = schedulerMgrDAO.getErrorCnt2(null);
+			
+		} 
+		catch (Exception e) 
+		{
+			System.out.println(e.getMessage());
+		}
+		return cnt;
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: weeklyReportList
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			차주휴가일정 리스트
+	 * 	</pre>
+	 * @param commandMap
+	 * @return weeklyReportList
+	 * @throws 
+	 */
+	@Override
+	public List<Map<String, Object>> weeklyReportList(CommandMap commandMap)
+	{
+		
+		List<Map<String, Object>> listData = schedulerMgrDAO.weeklyReportList(commandMap.getMap());
+		return listData;
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: vacationNoticeList
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			차주휴가일정 리스트
+	 * 	</pre>
+	 * @param commandMap
+	 * @return vacationNoticeList
+	 * @throws 
+	 */
+	@Override
+	public List<Map<String, Object>> vacationNoticeList(CommandMap commandMap)
+	{
+		
+		List<Map<String, Object>> listData = schedulerMgrDAO.vacationNoticeList(commandMap.getMap());
+		return listData;
+	}
+
+}

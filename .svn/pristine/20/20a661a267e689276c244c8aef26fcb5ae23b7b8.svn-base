@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SmsSend">
+
+	<insert id="sendSms" parameterType="java.util.Map">
+		INSERT
+		  INTO UDS_MSG (
+		  	    CMID
+			  , UMID
+			  , MSG_TYPE
+			  , STATUS
+			  , REQUEST_TIME
+			  , SEND_TIME
+			  , DEST_PHONE
+			  , SEND_PHONE
+			  , MSG_BODY
+			  , DSPR_ID
+			  , MNU_ID
+			 )
+		VALUES(
+			    SMS_SEQ.NEXTVAL
+			  , NULL
+			  , 0
+			  , 0
+			  , SYSDATE
+			  , SYSDATE
+			  , #{send_phone}
+			  , '055-981-9547'
+			  , #{msg_body} 
+			  , 'GE_ADMIN'
+			  , 'DSM-ISP'
+		     )
+	</insert>
+	
+	<insert id="smsSendHistory" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_SMS_NOTICE_INFO (
+		  	   SEQ_ID
+	  		 , SMS_TYPE 
+		     , ICUI_SEQ_ID 
+		     , CONTENTS 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+		     , #{sms_type}
+			 , #{p_icui_seq_id}
+			 , #{msg_body} 
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+</mapper>

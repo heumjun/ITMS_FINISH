@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="UserMail">
+	<select id="getUserMail" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT (SELECT NAME FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{loginId}) AS USER_NAME
+		      ,(SELECT E_MAIL FROM ITSM_COM_USER_INFO WHERE LOGIN_ID = #{loginId}) AS CREATE_MAIL
+		      ,(SELECT E_MAIL
+		          FROM ITSM_COM_USER_INFO
+		         WHERE LOGIN_ID = #{approvalAdmin}) AS APPROVAL_MAIL
+		      ,TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI') AS CREATE_DATE   
+		  FROM DUAL
+	</select>
+</mapper>

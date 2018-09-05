@@ -1,0 +1,402 @@
+package com.web.scheduler.controller;
+
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.VelocityEngine;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.web.common.command.CommandMap;
+import com.web.common.constants.Constants;
+import com.web.common.exceptionHandler.CommonException;
+import com.web.common.util.MessageUtil;
+import com.web.common.util.StringUtil;
+import com.web.scheduler.service.SchedulerMgrService;
+import com.web.temp.tempMgr.dao.TempMgrDAO;
+
+/**
+ * 
+ * @파일명	: SchedulerMgrController.java 
+ * @프로젝트	: ITMS
+ * @날짜		: 2018. 8. 16.
+ * @작성자	: Son JungHwi
+ * @설명
+ * <pre>
+ * 		배치스케쥴컨트롤러	
+ * </pre>
+ */
+@Component
+public class SchedulerMgrController
+{
+	
+	protected Log log = LogFactory.getLog(SchedulerMgrController.class);
+
+	@Resource(name = "schedulerMgrService")
+	public SchedulerMgrService schedulerMgrService;
+	
+	@Resource(name = "velocityEngine")
+	private VelocityEngine velocityEngine;
+
+	@Resource(name = "temp.tempMgr.tempMgrDAO")
+	private TempMgrDAO tempMgrDAO;
+	
+	/**
+	 * 
+	 * @메소드명	: sendMail
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			ERP 메일 전송
+	 * 	</pre>
+	 * @param commandMap
+	 * @return
+	 * @throws CommonException
+	 */
+	private void sendMail(CommandMap commandMap) throws CommonException 
+	{
+		
+		// 결과값 최초
+		String result = Constants.RESULT_SUCCESS;
+
+		// 메일 보내기(loginId) SET_DB_LOGIN_ID, APPROVAL_ADMIN
+		Map<String, String> resultMap = tempMgrDAO.getUserMail(commandMap.getMap());
+		
+		Template template = velocityEngine.getTemplate(commandMap.get("p_template").toString(), "UTF-8");
+		VelocityContext velocityContext = new VelocityContext();
+		velocityContext.put("conStatus", "R");
+		velocityContext.put("title", commandMap.get("p_title"));
+		velocityContext.put("contents", commandMap.get("p_contents"));
+		velocityContext.put("user_name", resultMap.get("user_name"));
+		velocityContext.put("create_date", resultMap.get("create_date"));
+		
+		StringWriter stringWriter = new StringWriter();
+		template.merge(velocityContext, stringWriter);
+		
+/*		System.out.println("==========="+commandMap.get("create_mail").toString());
+		System.out.println("==========="+commandMap.get("create_mail").toString());
+		System.out.println("==========="+commandMap.get("receiver_mail").toString());
+		System.out.println("==========="+commandMap.get("receiver_mail").toString());*/
+		
+		//commandMap.put("i_sender", resultMap.get("create_mail").toString());
+		commandMap.put("i_sender", commandMap.get("create_mail"));
+		commandMap.put("i_receiver", resultMap.get("create_mail"));
+		commandMap.put("i_message", stringWriter.toString());
+		commandMap.put("i_subject", commandMap.get("p_title"));
+		
+		String sErrCode = "";
+		
+		tempMgrDAO.sendMail(commandMap.getMap());
+		sErrCode = StringUtil.nullString(commandMap.get("o_err"));
+		
+		System.out.println("sErrCode : " + sErrCode);
+		
+		// 오류가 있으면 스탑
+		if (!"".equals(sErrCode)) 
+		{
+			result = Constants.RESULT_FAIL;
+		}
+
+		if (result.equals(Constants.RESULT_SUCCESS))
+		{
+			//Map<String, String> map = new HashMap<String, String>();
+			//map.put(Constants.RESULT_KEY, Constants.RESULT_SUCCESS);
+			//map.put(Constants.RESULT_MASAGE_KEY, "처리가 완료 되었습니다.");
+			//map.put("ref_table_seq_id", (String) commandMap.get(Constants.SEQ_ID));
+			//
+			//return map;
+			System.out.println("메일전송성공");
+		}
+		else if (result.equals(Constants.RESULT_FAIL))
+		{
+			// 실패한경우(실패 메시지가 없는 경우)
+			throw new CommonException();
+		}
+		else
+		{
+			// 실패한경우(실패 메시지가 있는 경우)
+			throw new CommonException(result);
+		}
+		
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: ErrorNoticeSchedule1
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			입고오류 통보 스케쥴러
+	 * 	</pre>
+	 * @param 
+	 * @return
+	 * @throws 
+	 */
+	//@Scheduled(cron = "0 0/5 * * * ?") // 테스트용 설정 5분에 한번씩 실행
+	@Scheduled(cron = "0 00 8,16 ? * MON-FRI") // 월~금, 매월, 아무 날이나 08:00:00, 16:00:00
+	public void ErrorNoticeSchedule1()
+	{
+
+		log.debug("======================================          START         ======================================");
+
+		Calendar calendar = Calendar.getInstance();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		log.info("입고오류 통보 스케쥴러 실행 : " + dateFormat.format(calendar.getTime()));
+		
+		// 데이터 취득
+		int cnt = schedulerMgrService.getErrorCnt1(null);
+		System.out.println("입고오류 건수 : " + cnt);
+		
+		// 확인
+		if (cnt == 0) return;
+		
+		//송신
+		String sendMail = MessageUtil.getMessage("errornotice1.sendMail");
+		//수신
+		String receiverId = MessageUtil.getMessage("errornotice1.receiverId");
+		
+		CommandMap commandMap = new CommandMap();
+		commandMap.put("p_template", "./mailTemplate/errorNotice.template");
+		commandMap.put("p_title", "오류알림메일 : 입고오류");
+		commandMap.put("p_contents", "ERP상에서 입고오류 건수가  " + cnt + "건 발생되었습니다.");
+		commandMap.put("create_mail", sendMail);
+		commandMap.put("loginId", receiverId);
+		
+		// 메일전송
+		try 
+		{
+			sendMail(commandMap);
+		} catch (CommonException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		log.debug("======================================           END          ======================================\n");
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: ErrorNoticeSchedule2
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			자재이동 오류 통보 스케쥴러
+	 * 	</pre>
+	 * @param 
+	 * @return
+	 * @throws 
+	 */
+	//@Scheduled(cron = "0 0/5 * * * ?") // 테스트용 설정 5분에 한번씩 실행
+	@Scheduled(cron = "0 00 16 ? * MON-FRI") // 월~금, 매월, 아무 날이나 16:00:00
+	public void ErrorNoticeSchedule2()
+	{
+
+		log.debug("======================================          START         ======================================");
+
+		Calendar calendar = Calendar.getInstance();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		log.info("자재이동 오류 통보 스케쥴러 실행 : " + dateFormat.format(calendar.getTime()));
+		
+		// 데이터 취득
+		int cnt = schedulerMgrService.getErrorCnt2(null);
+		System.out.println("자재이동 오류 건수 : " + cnt);
+		
+		// 확인
+		if (cnt == 0) return;
+		
+		//송신
+		String sendMail = MessageUtil.getMessage("errornotice2.sendMail");
+		//수신
+		String receiverId = MessageUtil.getMessage("errornotice2.receiverId");
+		
+		CommandMap commandMap = new CommandMap();
+		commandMap.put("p_template", "./mailTemplate/errorNotice.template");
+		commandMap.put("p_title", "오류알림메일 : 자재이동 오류");
+		commandMap.put("p_contents", "ERP상에서 자재이동오류 건수가 " + cnt + "건 발생되었습니다.");
+		commandMap.put("create_mail", sendMail);
+		commandMap.put("loginId", receiverId);
+		
+		// 메일전송
+		try 
+		{
+			sendMail(commandMap);
+		} catch (CommonException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		log.debug("======================================           END          ======================================\n");
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: weeklyReportSchedule
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			주간실적 통보 스케쥴러
+	 * 	</pre>
+	 * @param 
+	 * @return
+	 * @throws 
+	 */
+	//@Scheduled(cron = "0 0/5 * * * ?") // 테스트용 설정 5분에 한번씩 실행
+	@Scheduled(cron = "0 30 16 ? * THU") // 매주 목요일 오후4시30분
+	public void weeklyReportSchedule()
+	{
+
+		log.debug("======================================          START         ======================================");
+
+		Calendar calendar = Calendar.getInstance();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		log.info("주간실적 통보 스케쥴러 실행 : " + dateFormat.format(calendar.getTime()));
+		
+		// 데이터 취득
+		CommandMap commandMap = new CommandMap();
+		List<Map<String, Object>> list = schedulerMgrService.weeklyReportList(commandMap);
+		
+		StringBuilder sb = new StringBuilder();
+		//년월주차 출력
+		for (Map<String, Object> map : list) 
+		{
+			
+			sb.append("<font size=5><b>" + map.get("YEAR") + "년 " + map.get("MONTH") + "월 " + map.get("CHASU") + "주차 주간실적 집계  </b></font>");
+			break;
+		}
+		
+		//"ERP사업영역"
+		boolean eFlag = false;
+		boolean lFlag = false;
+		
+		//개인별 주간실적 출력
+		for (Map<String, Object> map : list) 
+		{
+			
+			String gubun = map.get("ERP_LEGACY_GUBUN").toString();
+			if ("E".equals(gubun)) {
+				if (!eFlag) {
+					sb.append("<font size=2><p>&nbsp;--------------------------------------------------------------------------------------------------</p></font><br/>");
+					sb.append("<font size=5><b>1.ERP파트</b></font><br/>");
+					eFlag = true;
+				}
+			} else if ("L".equals(gubun)) {
+				if (!lFlag) {
+					sb.append("<font size=2><p>&nbsp;--------------------------------------------------------------------------------------------------</p></font><br/>");
+					sb.append("<font size=5><b>2.LEGACY파트</b></font><br/>");
+					lFlag = true;
+				}
+			}
+			
+			sb.append("<font size=3><b>*작성자: " + map.get("NAME") + "(" + map.get("BUSINESS_ROLE") + ")</b></font>");
+			sb.append("<br/>");
+			sb.append(map.get("CONTENTS"));
+			sb.append("<br/>");
+		}
+		
+		System.out.println("주간실적 : " + sb.toString());
+		
+		//송신
+		String sendMail = MessageUtil.getMessage("weeklyReport.sendMail");
+		//수신
+		String receiverId = MessageUtil.getMessage("weeklyReport.receiverId");
+		
+		commandMap.put("p_template", "./mailTemplate/weeklyReport.template");
+		commandMap.put("p_title", "주간실적보고");
+		commandMap.put("p_contents", sb.toString());
+		commandMap.put("create_mail", sendMail);
+		commandMap.put("loginId", receiverId);
+		
+		// 메일전송
+		try 
+		{
+			sendMail(commandMap);
+		} catch (CommonException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		log.debug("======================================           END          ======================================\n");
+	}
+	
+	/**
+	 * 
+	 * @메소드명	: vacationNoticeList
+	 * @날짜		: 2018. 8. 16.
+	 * @작성자	: Son JungHwi
+	 * @설명 
+	 * 	<pre>
+	 *			차주휴가일정통보 스케쥴러
+	 * 	</pre>
+	 * @param 
+	 * @return
+	 * @throws 
+	 */
+	//@Scheduled(cron = "0 0/5 * * * ?") // 테스트용 설정 5분에 한번씩 실행
+	@Scheduled(cron = "0 30 16 ? * THU") // 매주 목요일 오후4시30분
+	public void vacationNoticeList()
+	{
+
+		log.debug("======================================          START         ======================================");
+
+		Calendar calendar = Calendar.getInstance();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		log.info("차주휴가일정 통보 스케쥴러 실행 : " + dateFormat.format(calendar.getTime()));
+		
+		// 데이터 취득
+		CommandMap commandMap = new CommandMap();
+		List<Map<String, Object>> list = schedulerMgrService.vacationNoticeList(commandMap);
+		
+		StringBuilder sb = new StringBuilder();
+		for (Map<String, Object> map : list) 
+		{
+			sb.append("<tr>");
+			sb.append("<td align='center' style='width:100;'><b>"+map.get("USER_NAME")+"</b></td>");
+			sb.append("<td align='center' style='width:100;'>"+map.get("VAC_TYPE_NAME")+"</td>");
+			sb.append("<td align='center' style='width:100;'>"+map.get("VAC_START_DATE")+"</td>");
+			sb.append("<td align='center' style='width:100;'>"+map.get("VAC_END_DATE")+"</td>");
+			sb.append("</tr>");
+		}
+		
+		System.out.println("차주휴가일정 : " + sb.toString());
+		
+		//송신
+		String sendMail = MessageUtil.getMessage("vacationNotice.sendMail");
+		//수신
+		String receiverId = MessageUtil.getMessage("vacationNotice.receiverId");
+		
+		commandMap.put("p_template", "./mailTemplate/vacationNotice.template");
+		commandMap.put("p_title", "차주휴가일정");
+		commandMap.put("p_contents", sb.toString());
+		commandMap.put("create_mail", sendMail);
+		commandMap.put("loginId", receiverId);
+		
+		// 메일전송
+		try 
+		{
+			sendMail(commandMap);
+		} catch (CommonException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		log.debug("======================================           END          ======================================\n");
+	}
+
+}

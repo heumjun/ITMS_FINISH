@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="WipChkMgrTab6">
+
+	<!-- 6.tab : 제작 Fixed Price --> 
+	<!-- Interface Table -->
+	<select id="wipChkMgrList19" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT 'TYPE1'  TYPE_NAME
+			      ,X.ERROR_MSG
+			      ,X.INTERFACE_YN      
+			      ,X.DELETE_YN         
+			      ,X.WEB_MASTER_ID     
+			      ,X.INTERFACE_ID      
+			      ,X.BC_DIVISION_CODE  
+			      ,X.SUPPLIER_ID       
+			      ,X.PERIOD_YYYYMM     
+			      ,X.PROJECT_ID        
+			      ,X.SUBMIT_TEAM       
+			      ,X.SUBMIT_EMPLOYEE_ID
+			FROM   XWIP_ACTUAL_FR_IF X
+			WHERE  1 = 1
+			AND    NVL(X.INTERFACE_YN,'!') <> 'Y'
+			UNION ALL
+			SELECT 'TYPE2'  TYPE_NAME
+			      ,X.ERROR_MSG
+			      ,X.INTERFACE_YN      
+			      ,X.DELETE_YN         
+			      ,X.WEB_MASTER_ID     
+			      ,X.INTERFACE_ID      
+			      ,X.BC_DIVISION_CODE  
+			      ,X.SUPPLIER_ID       
+			      ,X.PERIOD_YYYYMM     
+			      ,X.PROJECT_ID        
+			      ,X.SUBMIT_TEAM       
+			      ,X.SUBMIT_EMPLOYEE_ID
+			FROM   XWIP_ACTUAL_NZ_MC_IF X
+			WHERE  1 = 1
+			AND    NVL(X.INTERFACE_YN,'!') <> 'Y'
+	]]> 
+  	</select>
+  	
+  	<!-- Monthly Conunt -->
+	<select id="wipChkMgrList20" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT TO_CHAR(XAC.PERIOD_YYYYMMDD,'YYYY-MM')          ENTRY_DATE
+			      ,TO_CHAR(SUM(XAC.USE_AMOUNT),'999,999,999,990')  AMOUNT
+			      ,TO_CHAR(COUNT(*),'999,990')                     COUNT
+			FROM   XWIP_ACTUAL_CUT_NZ_MC_FR_V XAC
+			WHERE  XAC.PERIOD_YYYYMMDD >= TRUNC(LAST_DAY(ADD_MONTHS(SYSDATE,-6)))
+			GROUP BY XAC.PERIOD_YYYYMMDD
+			ORDER BY XAC.PERIOD_YYYYMMDD DESC
+	]]> 
+  	</select>
+  	
+  	<!-- Not Processed -->
+	<select id="wipChkMgrList21" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+	  	<![CDATA[
+			SELECT SOURCE 
+			      ,WEB_MASTER_ID 
+			      ,BC_DIVISION_ID 
+			      ,WORKING_CATEGORY_CODE WORKING_CATEGORY
+			      ,(SELECT FL.MEANING
+			        FROM   FND_LOOKUP_VALUES FL
+			        WHERE  FL.LOOKUP_TYPE = 'XDSM_MFG_WORKING_CATERORY'	
+			        AND    FL.LOOKUP_CODE = WORKING_CATEGORY_CODE) WORKING_CATEGORY_NAME
+			      ,SUPPLIER_ID 
+			      ,(SELECT PV.VENDOR_NAME 
+			        FROM   PO_VENDORS PV 
+			        WHERE  PV.VENDOR_ID = SUPPLIER_ID) SUPPLIER_NAME 
+			      ,PROJECT_ID        
+			      ,PERIOD_YYYYMMDD   
+			      ,PR_NUM            
+			      ,PR_LINE_NUM       
+			      ,AMOUNT            
+			      ,USE_AMOUNT        
+			      ,APPROVE_REJECT_YN 
+			      ,LINE_STATUS       
+			      ,PR_INTERFACE_YN   
+			      ,SUBMIT_TEAM       
+			      ,(SELECT HA.NAME   
+			        FROM   HR.HR_ALL_ORGANIZATION_UNITS HA 
+			        WHERE  HA.ORGANIZATION_ID = SUBMIT_TEAM) TEAM_NAME
+			      ,SUBMIT_EMPLOYEE_ID   
+			      ,(SELECT PAP.LAST_NAME  
+			        FROM   PER_ALL_PEOPLE_F PAP 
+			        WHERE  PAP.PERSON_ID = SUBMIT_EMPLOYEE_ID) EMPLOYEE_NAME 
+			FROM   (SELECT 'NZ_MC' AS SOURCE  
+			              ,XN.WEB_MASTER_ID,XN.BC_DIVISION_ID,XN.SUPPLIER_ID,XN.PROJECT_ID     
+			              ,XN.PERIOD_YYYYMMDD,XN.PR_NUM,XN.PR_LINE_NUM,XN.AMOUNT,XN.USE_AMOUNT 
+			              ,XN.APPROVE_REJECT_YN,XN.LINE_STATUS,XN.PR_INTERFACE_YN              
+			              ,XN.SUBMIT_TEAM,XN.SUBMIT_EMPLOYEE_ID,XN.WORKING_CATEGORY_CODE       
+			        FROM   XWIP_ACTUAL_APPROVE_NZ_MC XN                          
+			        WHERE  XN.PR_NUM IS NULL                                                   
+			        UNION ALL                                                                  
+			        SELECT 'FR',XF.WEB_MASTER_ID,XF.BC_DIVISION_ID,XF.SUPPLIER_ID,XF.PROJECT_ID
+			              ,XF.PERIOD_YYYYMMDD,XF.PR_NUM,XF.PR_LINE_NUM,XF.AMOUNT,XF.USE_AMOUNT 
+			              ,XF.APPROVE_REJECT_YN,XF.LINE_STATUS,XF.PR_INTERFACE_YN 
+			              ,XF.SUBMIT_TEAM,XF.SUBMIT_EMPLOYEE_ID,XF.WORKING_CATEGORY_CODE       
+			        FROM   XWIP_ACTUAL_APPROVE_FR XF
+			        WHERE  XF.PR_NUM IS NULL 
+			       ) A  
+			WHERE  1 = 1 
+			AND    PERIOD_YYYYMMDD >= TRUNC(SYSDATE,'MONTH')
+	]]> 
+  	</select>
+  	
+</mapper>

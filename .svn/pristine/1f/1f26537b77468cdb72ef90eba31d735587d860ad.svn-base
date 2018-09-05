@@ -1,0 +1,30 @@
+package com.web.admin.decryptMgr.dao;
+
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.web.common.dao.CommonDAO;
+
+/**
+ * 
+ * @파일명 : ManageCodeDAO.java
+ * @프로젝트 : ITMS
+ * @날짜 : 2018. 3. 28.
+ * @작성자 : Cho HeumJun
+ * @설명
+ * 
+ *     <pre>
+ *     공통코드관리
+ *     </pre>
+ */
+@Repository("admin.decryptMgr.decryptDAO")
+public class DecryptDAO extends CommonDAO
+{
+
+	public Map<String, Object> passwdConfirm(Map<String, Object> map)
+	{
+		return selectOne("Decrypt.passwdConfirm", map);
+	}
+
+}

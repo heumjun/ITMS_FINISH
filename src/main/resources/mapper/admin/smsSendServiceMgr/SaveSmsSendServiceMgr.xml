@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SaveSmsSendServiceMgr">
+
+ 	<insert id="insert" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_COM_SMS_NOTICE_INFO(
+		  	   SEQ_ID
+	  		 , SMS_TYPE 
+		     , ICUI_SEQ_ID 
+		     , CONTENTS 
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			  'SMS SEND SERVICE!'
+			 ,'C'  
+			 , #{icui_seq_id}
+		     , #{contents}
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+ 	<insert id="insert2" parameterType="java.util.Map">
+		INSERT
+		  INTO UDS_MSG (
+		  	    CMID
+			  , UMID
+			  , MSG_TYPE
+			  , STATUS
+			  , REQUEST_TIME
+			  , SEND_TIME
+			  , DEST_PHONE
+			  , SEND_PHONE
+			  , MSG_BODY
+			  , DSPR_ID
+			  , MNU_ID
+			 )
+		VALUES(
+			    SMS_SEQ.NEXTVAL
+			  , NULL
+			  , 0
+			  , 0
+			  , SYSDATE
+			  , SYSDATE
+			  , NVL((SELECT REPLACE(PHONE1,'-','') FROM ITSM_COM_USER_INFO WHERE SEQ_ID = #{icui_seq_id}),'010')
+			  , '055-981-9547'
+			  , #{contents} 
+			  , 'ITMS AMDIN'
+			  , 'GE-IT'
+		     )
+	</insert>
+</mapper>  	

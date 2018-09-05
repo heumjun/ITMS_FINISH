@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="NoticeMgr">
+
+	<select id="getMainNoticeList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		<![CDATA[
+			SELECT SEQ_ID
+			      ,TITLE
+			      ,TO_CHAR(NOTI_START_DATE, 'YYYY-MM-DD') AS NOTI_START_DATE
+			      ,TO_CHAR(NOTI_END_DATE, 'YYYY-MM-DD') AS NOTI_END_DATE
+			      ,TO_CHAR(LAST_UPDATE_DATE, 'YYYY-MM-DD AM HH24:MI') AS LAST_UPDATE_DATE
+			      ,CASE
+	                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+	                  'N'
+	                 ELSE
+	                  'Y'
+	               END  AS NEW_IMG
+			  FROM ITSM_IS_NOTICE_INFO
+			 WHERE 1 = 1
+			   AND ROWNUM < 4
+			 ORDER BY LAST_UPDATE_DATE DESC
+		]]>
+  	</select>
+
+	<select id="noticeList" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT T2.*
+		  FROM (SELECT T1.*
+		             , FLOOR((ROWNUM - 1) / #{pageSize} + 1 ) AS PAGE
+		          FROM 
+		          (  
+						SELECT COUNT(*) OVER() AS CNT
+						      ,SEQ_ID
+						      ,TITLE
+						      ,TO_CHAR(NOTI_START_DATE, 'YYYY-MM-DD') AS NOTI_START_DATE
+						      ,TO_CHAR(NOTI_END_DATE, 'YYYY-MM-DD') AS NOTI_END_DATE
+						      ,DECODE(NOTI_FLAG, 'Y', '사용', '비사용') AS NOTI_FLAG
+                  			  ,NOTI_FLAG AS NOTI_FLAG_TEST
+						      ,NOTI_FLAG AS NOTI_FLAG_CHANGED
+						      ,CASE
+				                 WHEN SYSDATE >= LAST_UPDATE_DATE + 7 THEN
+				                  'N'
+				                 ELSE
+				                  'Y'
+				               END  AS NEW_IMG
+						  FROM ITSM_IS_NOTICE_INFO
+						 WHERE 1=1
+						 <if test='p_title != null and !p_title.equalsIgnoreCase("")'>
+				           AND TITLE LIKE '%' || #{p_title} || '%'
+				         </if>
+				         <if test='p_noti_flag != null and !p_noti_flag.equalsIgnoreCase("")'>  
+			               AND NOTI_FLAG = #{p_noti_flag}
+			             </if>
+			             <if test="p_start_date != null and p_start_date !='' ">
+						   AND NOTI_START_DATE >= TO_DATE(#{p_start_date,jdbcType=VARCHAR},'YYYY-MM-DD')
+						</if>
+						<if test="p_end_date != null and p_end_date !='' ">
+						   AND NOTI_END_DATE <![CDATA[<]]>  TO_DATE(#{p_end_date,jdbcType=VARCHAR},'YYYY-MM-DD')+1
+						</if>
+			             
+					) T1 
+				) T2
+		 WHERE PAGE = #{curPageNo}
+  	</select>
+  	
+  	<insert id="saveNotice" parameterType="java.util.Map">
+		INSERT
+		  INTO ITSM_IS_NOTICE_INFO(
+		  	   SEQ_ID
+	  		 , TITLE 
+		     , CONTENTS
+		     , NOTI_FLAG 
+		     , NOTI_START_DATE 
+		     , NOTI_END_DATE
+		     , CREATE_DATE 
+		     , CREATED_BY
+		     , LAST_UPDATE_DATE
+		     , LAST_UPDATE_BY
+			 )
+		VALUES(
+			   #{seq_id}
+			 , #{p_title}
+		     , #{p_contents}
+		     , #{p_noti_flag}
+		     ,TO_DATE(REPLACE(#{p_noti_start_date},'-') || '000001', 'YYYY-MM-DD HH24MISS')
+		     ,TO_DATE(REPLACE(#{p_noti_end_date},'-') || '235959', 'YYYY-MM-DD HH24MISS')
+		     , SYSDATE
+		     , #{loginId}
+		     , SYSDATE
+		     , #{loginId}
+		     )
+	</insert>
+	
+	<update id="saveNoticeUpdate" parameterType="java.util.Map">
+		UPDATE ITSM_IS_NOTICE_INFO
+		   SET TITLE            = #{p_title}
+		      ,CONTENTS         = #{p_contents}
+		      ,NOTI_FLAG        = #{p_noti_flag}
+		      ,NOTI_START_DATE  = TO_DATE(REPLACE(#{p_noti_start_date},'-') || '000001', 'YYYY-MM-DD HH24MISS')
+		      ,NOTI_END_DATE    = TO_DATE(REPLACE(#{p_noti_end_date},'-') || '235959', 'YYYY-MM-DD HH24MISS')
+		      ,LAST_UPDATE_DATE = SYSDATE
+		      ,LAST_UPDATE_BY   = #{loginId}
+		 WHERE SEQ_ID = #{p_seq_id}
+	</update>
+	
+	<select id="getNotice" parameterType="java.util.Map" resultType="org.apache.commons.collections4.map.CaseInsensitiveMap" >
+		SELECT A.SEQ_ID AS SEQ
+		      ,A.TITLE
+		      ,A.NOTI_FLAG
+		      ,TO_CHAR(A.NOTI_START_DATE, 'YYYY-MM-DD') AS NOTI_START_DATE
+		      ,TO_CHAR(A.NOTI_END_DATE, 'YYYY-MM-DD') AS NOTI_END_DATE
+		      ,A.CONTENTS
+		      ,A.CREATED_BY
+		  FROM ITSM_IS_NOTICE_INFO A
+		 WHERE A.SEQ_ID = #{p_seq_id}
+  	</select>
+	
+  	
+</mapper>
